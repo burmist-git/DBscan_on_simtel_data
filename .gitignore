@@ -1,3 +1,7 @@
 *~
 .*~
 simtelarray_docker_image
+.ipynb_checkpoints/
+get_npe.py
+pixel_mapping.csv
+pixel_mapping_neighbors.csv
