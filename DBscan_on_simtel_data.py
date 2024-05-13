@@ -7,7 +7,6 @@ import numpy as np
 import pickle as pkl
 import sys
 import time
-#import matplotlib.pyplot as plt
 from sklearn.cluster import DBSCAN
 
 def print_ev(event):
@@ -85,10 +84,10 @@ def digi_sum(wf, digi_sum_shape, digi_sum_time_window):
     digitalsum=digitalsum[:,1:-1]
     return digitalsum
 
-def get_DBSCAN_clusters( digitalsum, pixel_mapping, time_norm, digitalsum_threshold, DBSCAN_eps, DBSCAN_min_samples):
+def get_DBSCAN_clusters( digitalsum, pixel_mapping_extended, time_norm, digitalsum_threshold, DBSCAN_eps, DBSCAN_min_samples):
     #
-    pix_x=pixel_mapping[:,0].reshape(pixel_mapping.shape[0],1)
-    pix_y=pixel_mapping[:,1].reshape(pixel_mapping.shape[0],1)
+    pix_x=pixel_mapping_extended[:,0].reshape(pixel_mapping_extended.shape[0],1)
+    pix_y=pixel_mapping_extended[:,1].reshape(pixel_mapping_extended.shape[0],1)
     pix_x=np.concatenate(([pix_x for i in np.arange(0,digitalsum.shape[1])]), axis=1)
     pix_y=np.concatenate(([pix_y for i in np.arange(0,digitalsum.shape[1])]), axis=1)
     #
@@ -128,6 +127,9 @@ def get_DBSCAN_clusters( digitalsum, pixel_mapping, time_norm, digitalsum_thresh
         clusters_info['y_mean'] = np.mean(pix_y[clusters==clustersID])
         clusters_info['t_mean'] = np.mean(pix_t[clusters==clustersID])
         #
+        clusters_info['channelID'] = get_channelID_from_x_y( pixel_mapping_extended=pixel_mapping_extended, x_val=clusters_info['x_mean'], y_val=clusters_info['y_mean'])
+        clusters_info['timeID'] = get_timeID( number_of_time_points=digitalsum.shape[1], time_norm=time_norm, t_val=clusters_info['t_mean'])
+        #
         #clustern = np.max([ for clID in np.unique(clusters)[1:]])
         #clustern = 0
         #print(len(cl_ID))
@@ -149,7 +151,26 @@ def def_clusters_info( n_digitalsum_points=0, n_clusters=0, n_points=0,
     #
     return clusters_info    
 
-def evtloop(datafilein, npecsvIn, nevmax, pixel_mapping, flower_pixID, df_pne):
+def get_channelID_from_x_y( pixel_mapping_extended, x_val, y_val):
+    delta_dim=0.015
+    pm=pixel_mapping_extended[pixel_mapping_extended[:,0] > (x_val-delta_dim)]
+    pm=pm[pm[:,0] < (x_val+delta_dim)]
+    pm=pm[pm[:,1] > (y_val-delta_dim)]
+    pm=pm[pm[:,1] < (y_val+delta_dim)]
+    #print(len(pm))
+    if len(pm)>0:
+        return int(pm[0,3])
+    return -999
+
+def get_timeID( number_of_time_points, time_norm, t_val):
+    if number_of_time_points > 1:        
+        pix_t=np.array([i for i in np.arange(0,number_of_time_points)])
+        pix_t=np.abs(pix_t*time_norm-t_val)
+        return np.argmin(pix_t)
+
+    return -999
+
+def evtloop(datafilein, npecsvIn, nevmax, pixel_mapping_extended, flower_pixID, df_pne):
     #
     sf = SimTelFile(datafilein)
     wf=np.array([], dtype=np.uint16)
@@ -168,7 +189,7 @@ def evtloop(datafilein, npecsvIn, nevmax, pixel_mapping, flower_pixID, df_pne):
             digitalsum=np.zeros(wf.shape)
         #
         try:
-            clusters_info = get_DBSCAN_clusters( digitalsum = digitalsum, pixel_mapping = pixel_mapping,
+            clusters_info = get_DBSCAN_clusters( digitalsum = digitalsum, pixel_mapping_extended = pixel_mapping_extended,
                                                  time_norm = 0.05, digitalsum_threshold = 6505,
                                                  DBSCAN_eps = 0.1, DBSCAN_min_samples = 15)
         except:
@@ -178,8 +199,6 @@ def evtloop(datafilein, npecsvIn, nevmax, pixel_mapping, flower_pixID, df_pne):
         #
         #
         #print(clusters_info)
-        #
-        #print(digitalsum.shape)
         #
         ev_counter=ev_counter+1
         #print('ev_counter = ', ev_counter)
@@ -200,6 +219,15 @@ def get_flower_pixID(pixel_mapping_neighbors):
     flower_seedID=np.arange(1, flower_pixID.shape[0]+1, 1).reshape(flower_pixID.shape[0],1)
     flower_pixID=np.concatenate((flower_seedID, flower_pixID), axis=1)
     return flower_pixID
+
+def extend_pixel_mapping(pixel_mapping):
+    pixel_mapping_extended = pixel_mapping.copy()
+    pix_ID=np.array([i for i in np.arange(0,pixel_mapping.shape[0])])
+    pix_ID=np.expand_dims(pix_ID,axis=1)
+    pixel_mapping_extended=np.concatenate((pixel_mapping_extended,pix_ID), axis=1)
+    #print(pixel_mapping_extended)
+    #print(pixel_mapping_extended.shape)
+    return pixel_mapping_extended
     
 def main():
     pass;
@@ -221,8 +249,9 @@ if __name__ == "__main__":
         #
         df_pne = pd.read_csv(npecsvIn)
         pixel_mapping = np.genfromtxt(pixel_mapping_csv)
+        pixel_mapping_extended = extend_pixel_mapping(pixel_mapping) 
         flower_pixID = get_flower_pixID(pixel_mapping_neighbors_csv)
         #
         evtloop( datafilein=simtelIn, npecsvIn=npecsvIn, nevmax=-1,
-                 pixel_mapping=pixel_mapping, flower_pixID=flower_pixID, df_pne=df_pne)
+                 pixel_mapping_extended=pixel_mapping_extended, flower_pixID=flower_pixID, df_pne=df_pne)
 
