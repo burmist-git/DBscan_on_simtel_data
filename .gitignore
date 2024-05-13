@@ -5,3 +5,4 @@ simtelarray_docker_image
 get_npe.py
 pixel_mapping.csv
 pixel_mapping_neighbors.csv
+digital_sum_threshold.pdf

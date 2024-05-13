@@ -8,6 +8,7 @@ import pickle as pkl
 import sys
 import time
 from sklearn.cluster import DBSCAN
+import matplotlib.pyplot as plt
 
 def print_ev(event):
     print("----------------------------------")
@@ -170,7 +171,32 @@ def get_timeID( number_of_time_points, time_norm, t_val):
 
     return -999
 
-def evtloop(datafilein, npecsvIn, nevmax, pixel_mapping_extended, flower_pixID, df_pne):
+def get_digital_sum_threshold( digitalsum, thresholds, number_of_digsum_micro_clusters_in_camera):
+    th=np.array([np.sum(digitalsum>th) for th in thresholds])
+    ths=thresholds[th<number_of_digsum_micro_clusters_in_camera]
+    if len(ths)>0:
+        return int(ths[0])
+    return -999
+
+def save_digital_sum_threshold_hist( data, thresholds, pdf_file_out):
+    fig, ax = plt.subplots()
+    ax.hist(data, bins=np.linspace(6200, 6700, num=100), edgecolor='black')
+    #ax.hist(data, bins=thresholds, edgecolor='black')
+    #ax.hist(data, edgecolor='black')
+    # Add labels and title
+    plt.xlabel('threshold')
+    #plt.ylabel('')
+    #plt.title('npe')
+    plt.yscale('log')  # Set y-axis to logarithmic scale
+    plt.grid(True)
+    # Show the plot
+    #plt.show()
+    ax.get_figure().savefig(pdf_file_out)
+    ax.clear();
+    ax.remove();
+    plt.close('all');
+    
+def evtloop(datafilein, npecsvIn, nevmax, pixel_mapping_extended, flower_pixID, df_pne, plot_optimizing_digi_sum_threshold):
     #
     sf = SimTelFile(datafilein)
     wf=np.array([], dtype=np.uint16)
@@ -180,6 +206,9 @@ def evtloop(datafilein, npecsvIn, nevmax, pixel_mapping_extended, flower_pixID, 
     toc = time.time()
     it_cout = 0
     #
+    digital_sum_threshold=[]
+    thresholds=np.linspace(6000, 7000, num=100)
+    #
     for ev in sf:
         wf=ev['telescope_events'][1]['adc_samples'][0]
         #digi_sum_and_DBSCAN(wf)
@@ -187,6 +216,10 @@ def evtloop(datafilein, npecsvIn, nevmax, pixel_mapping_extended, flower_pixID, 
             digitalsum=digi_sum(wf=wf, digi_sum_shape=flower_pixID, digi_sum_time_window=3)
         except:
             digitalsum=np.zeros(wf.shape)
+        #
+        if plot_optimizing_digi_sum_threshold:
+            digital_sum_threshold.append(get_digital_sum_threshold( digitalsum=digitalsum, thresholds=thresholds, number_of_digsum_micro_clusters_in_camera=750))
+        #
         #
         try:
             clusters_info = get_DBSCAN_clusters( digitalsum = digitalsum, pixel_mapping_extended = pixel_mapping_extended,
@@ -212,6 +245,11 @@ def evtloop(datafilein, npecsvIn, nevmax, pixel_mapping_extended, flower_pixID, 
         it_cout = it_cout + 1
         
     sf.close()
+
+    if plot_optimizing_digi_sum_threshold:
+        save_digital_sum_threshold_hist(np.array(digital_sum_threshold),thresholds, "digital_sum_threshold.pdf")
+        #print( "digital_sum_threshold = ", np.mean(np.array(digital_sum_threshold)))
+        #thresholds=np.linspace(6000, 7000, num=100)
     
 def get_flower_pixID(pixel_mapping_neighbors):
     flower_pixID = np.genfromtxt(pixel_mapping_neighbors,dtype=int)
@@ -253,5 +291,6 @@ if __name__ == "__main__":
         flower_pixID = get_flower_pixID(pixel_mapping_neighbors_csv)
         #
         evtloop( datafilein=simtelIn, npecsvIn=npecsvIn, nevmax=-1,
-                 pixel_mapping_extended=pixel_mapping_extended, flower_pixID=flower_pixID, df_pne=df_pne)
+                 pixel_mapping_extended=pixel_mapping_extended, flower_pixID=flower_pixID, df_pne=df_pne,
+                 plot_optimizing_digi_sum_threshold=True)
 
