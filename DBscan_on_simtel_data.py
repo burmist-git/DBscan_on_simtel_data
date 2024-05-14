@@ -1,5 +1,7 @@
-#!/home/burmist/miniconda/envs/eventio/bin/python
+#!/users/lburmist/miniconda/envs/pyeventio/bin/python
 # -*- coding: utf-8 -*-
+
+#/home/burmist/miniconda/envs/eventio/bin/python
 
 from eventio import SimTelFile
 import pandas as pd
@@ -45,6 +47,18 @@ def print_ev_info( datafilein = "../simtel_data/proton/data/corsika_run1.simtel.
             break
     
     sf.close()
+
+def get_number_of_channels_wf_number_of_time_points(simtelIn):
+    sf = SimTelFile(simtelIn)
+    for ev in sf:
+        #print("wfshape          ", ev['telescope_events'][1]['adc_samples'][0].shape)
+        number_of_time_points=ev['telescope_events'][1]['adc_samples'][0].shape[1]
+        number_of_channels=ev['telescope_events'][1]['adc_samples'][0].shape[0]
+        break
+    
+    sf.close()
+
+    return number_of_channels, number_of_time_points
 
 def get_pixel_mapping(datafilein = "../simtel_data/proton/data/corsika_run1.simtel.gz", outmap_csv = 'pixel_mapping.csv'):
     sf = SimTelFile(datafilein)
@@ -138,10 +152,11 @@ def get_DBSCAN_clusters( digitalsum, pixel_mapping_extended, time_norm, digitals
     #
     return clusters_info
 
-def def_clusters_info( n_digitalsum_points=0, n_clusters=0, n_points=0,
+def def_clusters_info( event_ID = -999, n_digitalsum_points=0, n_clusters=0, n_points=0,
                        x_mean=-999.0, y_mean=-999.0, t_mean=-999.0,
                        channelID=-999, timeID=-999):
-    clusters_info={'n_digitalsum_points':n_digitalsum_points,
+    clusters_info={'event_ID':event_ID,
+                   'n_digitalsum_points':n_digitalsum_points,
                    'n_clusters':n_clusters,
                    'n_points':n_points,
                    'x_mean':x_mean,
@@ -180,7 +195,7 @@ def get_digital_sum_threshold( digitalsum, thresholds, number_of_digsum_micro_cl
 
 def save_digital_sum_threshold_hist( data, thresholds, pdf_file_out):
     fig, ax = plt.subplots()
-    ax.hist(data, bins=np.linspace(6200, 6700, num=100), edgecolor='black')
+    ax.hist(data, bins=np.linspace(6500, 6550, num=200), edgecolor='black')
     #ax.hist(data, bins=thresholds, edgecolor='black')
     #ax.hist(data, edgecolor='black')
     # Add labels and title
@@ -196,7 +211,7 @@ def save_digital_sum_threshold_hist( data, thresholds, pdf_file_out):
     ax.remove();
     plt.close('all');
     
-def evtloop(datafilein, npecsvIn, nevmax, pixel_mapping_extended, flower_pixID, df_pne, plot_optimizing_digi_sum_threshold):
+def evtloop(datafilein, nevmax, pixel_mapping_extended, flower_pixID, plot_optimizing_digi_sum_threshold):
     #
     sf = SimTelFile(datafilein)
     wf=np.array([], dtype=np.uint16)
@@ -209,9 +224,13 @@ def evtloop(datafilein, npecsvIn, nevmax, pixel_mapping_extended, flower_pixID, 
     digital_sum_threshold=[]
     thresholds=np.linspace(6000, 7000, num=100)
     #
+    event_info_list=[]
+    clusters_info_list=[]
+    #
     for ev in sf:
+        #
         wf=ev['telescope_events'][1]['adc_samples'][0]
-        #digi_sum_and_DBSCAN(wf)
+        #
         try:
             digitalsum=digi_sum(wf=wf, digi_sum_shape=flower_pixID, digi_sum_time_window=3)
         except:
@@ -223,13 +242,42 @@ def evtloop(datafilein, npecsvIn, nevmax, pixel_mapping_extended, flower_pixID, 
         #
         try:
             clusters_info = get_DBSCAN_clusters( digitalsum = digitalsum, pixel_mapping_extended = pixel_mapping_extended,
-                                                 time_norm = 0.05, digitalsum_threshold = 6505,
+                                                 time_norm = 0.05, digitalsum_threshold = 6514,
                                                  DBSCAN_eps = 0.1, DBSCAN_min_samples = 15)
         except:
             clusters_info = def_clusters_info()
             #clusters=np.empty(shape=(0,), dtype=int)
             #clusters=np.array([],dtype=int)
         #
+        #
+        clusters_info['event_ID'] = int(ev['event_id'])
+        clusters_info_list.append(clusters_info)
+        #
+        event_info_list.append([ev['event_id'],
+                                ev['mc_shower']['energy'],
+                                ev['mc_shower']['azimuth'],
+                                ev['mc_shower']['altitude'],
+                                ev['mc_shower']['h_first_int'],
+                                ev['mc_shower']['xmax'],
+                                ev['mc_shower']['hmax'],
+                                ev['mc_shower']['emax'],
+                                ev['mc_shower']['cmax'],
+                                ev['mc_event']['xcore'],
+                                ev['mc_event']['ycore'],
+                                ev['telescope_events'][1]['header']['readout_time'],
+                                len(ev['photons'][0]),
+                                ev['photoelectrons'][0]['n_pe'],
+                                (ev['photoelectrons'][0]['n_pixels']-np.sum(ev['photoelectrons'][0]['photoelectrons']==0)),
+                                clusters_info['event_ID'],
+                                clusters_info['n_digitalsum_points'],
+                                clusters_info['n_clusters'],
+                                clusters_info['n_points'],
+                                clusters_info['x_mean'],
+                                clusters_info['y_mean'],
+                                clusters_info['t_mean'],
+                                clusters_info['channelID'],
+                                clusters_info['timeID']])                               
+        
         #
         #print(clusters_info)
         #
@@ -245,12 +293,14 @@ def evtloop(datafilein, npecsvIn, nevmax, pixel_mapping_extended, flower_pixID, 
         it_cout = it_cout + 1
         
     sf.close()
-
+    
     if plot_optimizing_digi_sum_threshold:
         save_digital_sum_threshold_hist(np.array(digital_sum_threshold),thresholds, "digital_sum_threshold.pdf")
-        #print( "digital_sum_threshold = ", np.mean(np.array(digital_sum_threshold)))
+        print( "digital_sum_threshold = ", np.mean(np.array(digital_sum_threshold)))
         #thresholds=np.linspace(6000, 7000, num=100)
-    
+
+    return  event_info_list, clusters_info_list
+        
 def get_flower_pixID(pixel_mapping_neighbors):
     flower_pixID = np.genfromtxt(pixel_mapping_neighbors,dtype=int)
     flower_pixID=flower_pixID+1
@@ -266,31 +316,146 @@ def extend_pixel_mapping(pixel_mapping):
     #print(pixel_mapping_extended)
     #print(pixel_mapping_extended.shape)
     return pixel_mapping_extended
+
+def test_channelID_timeID_getters( pixel_mapping_csv, number_of_time_points):
+    time_norm = 0.05
+    pixel_mapping = np.genfromtxt(pixel_mapping_csv)
+    #
+    x_val=0
+    y_val=0
+    t_val_not_norm=0
+    #
+    t_val=t_val_not_norm*time_norm
+    print("----------")
+    print("x         ", x_val)
+    print("y         ", y_val)
+    print("t         ", t_val_not_norm)
+    print("channelID ", get_channelID_from_x_y(pixel_mapping_extended=extend_pixel_mapping(pixel_mapping),
+                                               x_val=x_val, y_val=y_val))
+    print("timeID    ", get_timeID( number_of_time_points=number_of_time_points,
+                                    time_norm=time_norm, t_val=t_val))    
+    #
+    x_val = -0.328050
+    y_val =  0.694470
+    t_val_not_norm=37
+    #
+    t_val=t_val_not_norm*time_norm
+    print("----------")
+    print("true chID ", 2139)
+    print("x         ", x_val)
+    print("y         ", y_val)
+    print("t         ", t_val_not_norm)
+    print("channelID ", get_channelID_from_x_y(pixel_mapping_extended=extend_pixel_mapping(pixel_mapping),
+                                               x_val=x_val, y_val=y_val))
+    print("timeID    ", get_timeID( number_of_time_points=number_of_time_points,
+                                    time_norm=time_norm, t_val=t_val))    
+    #
+    x_val = 1.044900
+    y_val = 0.126270
+    t_val_not_norm=50
+    #
+    t_val=t_val_not_norm*time_norm
+    print("----------")
+    print("true chID ", 7969)
+    print("x         ", x_val)
+    print("y         ", y_val)
+    print("t         ", t_val_not_norm)
+    print("channelID ", get_channelID_from_x_y(pixel_mapping_extended=extend_pixel_mapping(pixel_mapping),
+                                               x_val=x_val, y_val=y_val))
+    print("timeID    ", get_timeID( number_of_time_points=number_of_time_points,
+                                    time_norm=time_norm, t_val=t_val))    
+    #
+    x_val = 0.558900
+    y_val = 0.883870
+    t_val_not_norm=47
+    #
+    t_val=t_val_not_norm*time_norm
+    print("----------")
+    print("true chID ", 1151)
+    print("x         ", x_val)
+    print("y         ", y_val)
+    print("t         ", t_val_not_norm)
+    print("channelID ", get_channelID_from_x_y(pixel_mapping_extended=extend_pixel_mapping(pixel_mapping),
+                                               x_val=x_val, y_val=y_val))
+    print("timeID    ", get_timeID( number_of_time_points=number_of_time_points,
+                                    time_norm=time_norm, t_val=t_val))
+
+def mearge_and_save_data( event_info_list, clusters_info_list, headeroutpkl, headeroutcsv):
+    #print(len(event_info_list))
+    #print(len(clusters_info_list))
+    event_info_arr=np.array(event_info_list)
+    #print(len(event_info_arr))
+    #print(event_info_arr.shape)
+    clusters_info_arr=np.array(clusters_info_list)
+    pkl.dump(event_info_arr, open(headeroutpkl, "wb"), protocol=pkl.HIGHEST_PROTOCOL)    
+    df = pd.DataFrame({'event_id': event_info_arr[:,0], 
+                       'energy': event_info_arr[:,1],
+                       'azimuth': event_info_arr[:,2],
+                       'altitude': event_info_arr[:,3],
+                       'h_first_int': event_info_arr[:,4],
+                       'xmax': event_info_arr[:,5],
+                       'hmax': event_info_arr[:,6],
+                       'emax': event_info_arr[:,7],
+                       'cmax': event_info_arr[:,8],
+                       'xcore': event_info_arr[:,9],
+                       'ycore': event_info_arr[:,10],
+                       'ev_time': event_info_arr[:,11],
+                       'nphotons': event_info_arr[:,12],
+                       'n_pe': event_info_arr[:,13],
+                       'n_pixels': event_info_arr[:,14],
+                       'cluster_event_ID': event_info_arr[:,15],
+                       'n_digitalsum_points': event_info_arr[:,16],
+                       'n_clusters': event_info_arr[:,17],
+                       'n_points': event_info_arr[:,18],
+                       'x_mean': event_info_arr[:,19],
+                       'y_mean': event_info_arr[:,20],
+                       't_mean': event_info_arr[:,21],
+                       'channelID': event_info_arr[:,22],
+                       'timeID': event_info_arr[:,23]})
+    df.to_csv(headeroutcsv)
+    print("mean(event_id - cluster_event_ID) : ", np.mean(event_info_arr[:,0]-event_info_arr[:,15]))
+    print("std(event_id - cluster_event_ID)  : ", np.std(event_info_arr[:,0]-event_info_arr[:,15]))
     
 def main():
-    pass;
+    pass
     
 if __name__ == "__main__":
-    if (len(sys.argv)==5):
+    if (len(sys.argv)==7 and (str(sys.argv[1]) == "-d")):
         #
-        simtelIn = str(sys.argv[1])
-        npecsvIn = str(sys.argv[2])
-        pixel_mapping_csv = str(sys.argv[3])
-        pixel_mapping_neighbors_csv = str(sys.argv[4])
+        simtelIn = str(sys.argv[2])
+        headeroutpkl = str(sys.argv[3])
+        headeroutcsv = str(sys.argv[4])
+        #npecsvIn = str(sys.argv[3])
+        pixel_mapping_csv = str(sys.argv[5])
+        pixel_mapping_neighbors_csv = str(sys.argv[6])
         #
         print("simtelIn                    = ", simtelIn)
-        print("npecsvIn                    = ", npecsvIn)
+        print("headeroutpkl                = ", headeroutpkl)
+        print("headeroutcsv                = ", headeroutcsv)
+        #print("npecsvIn                    = ", npecsvIn)
         print("pixel_mapping_csv           = ", pixel_mapping_csv)
         print("pixel_mapping_neighbors_csv = ", pixel_mapping_neighbors_csv)
         #
         #print_ev_info()
         #
-        df_pne = pd.read_csv(npecsvIn)
+        #df_pne = pd.read_csv(npecsvIn)
         pixel_mapping = np.genfromtxt(pixel_mapping_csv)
         pixel_mapping_extended = extend_pixel_mapping(pixel_mapping) 
         flower_pixID = get_flower_pixID(pixel_mapping_neighbors_csv)
         #
-        evtloop( datafilein=simtelIn, npecsvIn=npecsvIn, nevmax=-1,
-                 pixel_mapping_extended=pixel_mapping_extended, flower_pixID=flower_pixID, df_pne=df_pne,
-                 plot_optimizing_digi_sum_threshold=True)
-
+        event_info_list, clusters_info_list = evtloop( datafilein=simtelIn, nevmax=-1,
+                                                       pixel_mapping_extended=pixel_mapping_extended, flower_pixID=flower_pixID,
+                                                       plot_optimizing_digi_sum_threshold=False)
+        #
+        mearge_and_save_data( event_info_list, clusters_info_list, headeroutpkl, headeroutcsv)
+        #        
+        #
+    elif (len(sys.argv)==4 and (str(sys.argv[1]) == "--test_getters")):
+        simtelIn = str(sys.argv[2])
+        pixel_mapping_csv = str(sys.argv[3])
+        print("simtelIn                    = ", simtelIn)
+        print("pixel_mapping_csv           = ", pixel_mapping_csv)
+        number_of_channels, number_of_time_points = get_number_of_channels_wf_number_of_time_points(simtelIn)        
+        #print("number_of_channels    = ", number_of_channels)
+        #print("number_of_time_points = ", number_of_time_points)
+        test_channelID_timeID_getters( pixel_mapping_csv=pixel_mapping_csv, number_of_time_points=number_of_time_points)
