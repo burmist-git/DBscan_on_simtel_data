@@ -3,8 +3,6 @@
 simtelarray_docker_image
 .ipynb_checkpoints/
 get_npe.py
-pixel_mapping.csv
-pixel_mapping_neighbors.csv
 digital_sum_threshold.pdf
 greasy_job/
 run_greasy_sbatch.sh
