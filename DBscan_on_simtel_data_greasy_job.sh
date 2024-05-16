@@ -60,7 +60,7 @@ else
 		echo "#SBATCH --output=/scratch/snx3000/lburmist/simtel_data/job_outlog/simtel.%j.out" >> $outJOBfile
 		echo "#SBATCH --error=/scratch/snx3000/lburmist/simtel_data/job_error/simtel.%j.err" >> $outJOBfile
 		echo "#SBATCH --account=cta04" >> $outJOBfile
-		echo "#SBATCH --time=01:00:00" >> $outJOBfile
+		echo "#SBATCH --time=02:00:00" >> $outJOBfile
 		echo "#SBATCH --nodes=1" >> $outJOBfile
 		echo "#SBATCH --cpus-per-task=1" >> $outJOBfile
 		echo "#SBATCH --partition=normal" >> $outJOBfile
