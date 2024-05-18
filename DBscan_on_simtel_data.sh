@@ -17,9 +17,13 @@ else
 	#headeroutpkl="/scratch/snx3000/lburmist/simtel_data/NSB386MHz/npe/corsika_run1.npe.pkl"
 	#headeroutcsv="/scratch/snx3000/lburmist/simtel_data/NSB386MHz/npe/corsika_run1.npe.csv"
 	#
-	simtelIn="/scratch/snx3000/lburmist/simtel_data/proton/data/corsika_run1.simtel.gz"
-	headeroutpkl="/scratch/snx3000/lburmist/simtel_data/proton/npe/corsika_run1.npe.pkl"
-	headeroutcsv="/scratch/snx3000/lburmist/simtel_data/proton/npe/corsika_run1.npe.csv"
+	#simtelIn="/scratch/snx3000/lburmist/simtel_data/proton/data/corsika_run1.simtel.gz"
+	#headeroutpkl="/scratch/snx3000/lburmist/simtel_data/proton/npe/corsika_run1.npe.pkl"
+	#headeroutcsv="/scratch/snx3000/lburmist/simtel_data/proton/npe/corsika_run1.npe.csv"
+	#
+	simtelIn="/scratch/snx3000/lburmist/simtel_data/NSB268MHz/data/corsika_run1.simtel.gz"
+	headeroutpkl="/scratch/snx3000/lburmist/simtel_data/NSB268MHz/npe/corsika_run1.npe.pkl"
+	headeroutcsv="/scratch/snx3000/lburmist/simtel_data/NSB268MHz/npe/corsika_run1.npe.csv"
 	#
 	pixel_mapping_csv="pixel_mapping.csv"
         pixel_mapping_neighbors_csv="pixel_mapping_neighbors.csv"

@@ -222,7 +222,7 @@ def evtloop(datafilein, nevmax, pixel_mapping_extended, flower_pixID, plot_optim
     it_cout = 0
     #
     digital_sum_threshold=[]
-    thresholds=np.linspace(6000, 7000, num=100)
+    thresholds=np.linspace(6000, 7000, num=1000)
     #
     event_info_list=[]
     clusters_info_list=[]
@@ -242,9 +242,9 @@ def evtloop(datafilein, nevmax, pixel_mapping_extended, flower_pixID, plot_optim
         #
         try:
             #digitalsum_threshold = 6514 NSB @ 386MHz
-            #digitalsum_threshold = 6447 NSB @ 268MHz
+            #digitalsum_threshold = 6481 NSB @ 268MHz
             clusters_info = get_DBSCAN_clusters( digitalsum = digitalsum, pixel_mapping_extended = pixel_mapping_extended,
-                                                 time_norm = 0.05, digitalsum_threshold = 6447,
+                                                 time_norm = 0.05, digitalsum_threshold = 6481,
                                                  DBSCAN_eps = 0.1, DBSCAN_min_samples = 15)
         except:
             clusters_info = def_clusters_info()
