@@ -29,7 +29,8 @@ else
             elif [ "$2" = "p" ]; then
 		particletype="proton"
             elif [ "$2" = "NSB" ]; then
-		particletype="NSB386MHz"
+		#particletype="NSB386MHz"
+		particletype="NSB268MHz"
             fi
 	    #
 	    Nnodes=$3
