@@ -27,6 +27,16 @@ def print_ev(event):
     print("typeadc          ", type(event['telescope_events'][1]['adc_samples'][0][0][0]))
     print("----------------------------------")
 
+def print_ev_first_ID( datafilein = "../simtel_data/proton/data/corsika_run1.simtel.gz", n_ev=10):
+    sf = SimTelFile(datafilein)
+    ev_counter = 0
+    for ev in sf:
+        print("event_id         ", ev['event_id'])
+        ev_counter=ev_counter+1
+        if (ev_counter >= n_ev and n_ev > 0):
+            break
+    sf.close()
+    
 def print_ev_info( datafilein = "../simtel_data/proton/data/corsika_run1.simtel.gz", evID=1240202):
     sf = SimTelFile(datafilein)
     for ev in sf:

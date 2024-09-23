@@ -16,3 +16,7 @@ DBscan_on_simtel_data_g/
 DBscan_on_simtel_data_gd/
 DBscan_on_simtel_data_nsb/
 DBscan_on_simtel_data_p/
+__pycache__/
+hist_wf_val.csv
+hist_wf_val_NSB268MHz.csv
+hist_wf_val_NSB386MHz.csv
