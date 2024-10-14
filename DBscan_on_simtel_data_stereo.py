@@ -21,7 +21,7 @@ _n_max_noise_events=1000
 _npe_noise=20
 _n_of_time_sample=75
 _time_of_one_sample_s=(_n_of_time_sample*1000/1024.0*1.0e-9)
-_event_modulo=1
+_event_modulo=100
 #
 #
 _time_norm=0.09
@@ -209,17 +209,19 @@ def save_and_analyze_rates_noise( hist_data, pdf_file_out, n_samples):
     #
     return    
     
-def analyze_noise( wf_noise, wf_noise_blacklist,
-                   L0_digitalsum_noise, L1_digitalsum_noise,
-                   L0_digitalsum_noise_blacklist, L1_digitalsum_noise_blacklist):
+def analyze_noise( wf_noise, L1_digitalsum_noise, L3_digitalsum_noise, L3_digitalsum_noise_all):
+    #
+    print("analyze_noise")
     #
     print(len(wf_noise))
-    print(len(L0_digitalsum_noise))
     print(len(L1_digitalsum_noise))
+    print(len(L3_digitalsum_noise))
+    print(len(L3_digitalsum_noise_all))
     #
     print(wf_noise[0].shape)
-    print(L0_digitalsum_noise[0].shape)
     print(L1_digitalsum_noise[0].shape)
+    print(L3_digitalsum_noise[0].shape)
+    print(L3_digitalsum_noise_all[0].shape)
     #
     print(_time_of_one_sample_s)
     #
@@ -233,15 +235,6 @@ def analyze_noise( wf_noise, wf_noise_blacklist,
     wf_noise_arr = result
     #
     result = None
-    for array in L0_digitalsum_noise:
-        if result is None:
-            result = array
-        else:
-            result = np.concatenate((result, array))
-    #
-    L0_digitalsum_noise_arr = result
-    #
-    result = None
     for array in L1_digitalsum_noise:
         if result is None:
             result = array
@@ -251,47 +244,36 @@ def analyze_noise( wf_noise, wf_noise_blacklist,
     L1_digitalsum_noise_arr = result
     #
     result = None
-    for array in wf_noise_blacklist:
+    for array in L1_digitalsum_noise:
         if result is None:
             result = array
         else:
             result = np.concatenate((result, array))
     #
-    wf_noise_blacklist_arr = result
+    L3_digitalsum_noise_arr = result
     #
     result = None
-    for array in L0_digitalsum_noise_blacklist:
+    for array in L3_digitalsum_noise_all:
         if result is None:
             result = array
         else:
             result = np.concatenate((result, array))
     #
-    L0_digitalsum_noise_blacklist_arr = result
-    #
-    result = None
-    for array in L1_digitalsum_noise_blacklist:
-        if result is None:
-            result = array
-        else:
-            result = np.concatenate((result, array))
-    #
-    L1_digitalsum_noise_blacklist_arr = result
+    L3_digitalsum_noise_all_arr = result
     #
     print(np.mean(wf_noise_arr)," ",np.std(wf_noise_arr))
-    print(np.mean(L0_digitalsum_noise_arr)," ",np.std(L0_digitalsum_noise_arr))
     print(np.mean(L1_digitalsum_noise_arr)," ",np.std(L1_digitalsum_noise_arr))
+    print(np.mean(L3_digitalsum_noise_arr)," ",np.std(L3_digitalsum_noise_arr))
+    print(np.mean(L3_digitalsum_noise_all_arr)," ",np.std(L3_digitalsum_noise_all_arr))
     #
     save_analyze_noise( data=wf_noise_arr.flatten(), pdf_file_out="wf_noiseNSB268MHz_arr.pdf", n_samples=len(wf_noise))
-    save_analyze_noise( data=L0_digitalsum_noise_arr.flatten(), pdf_file_out="L0_digitalsum_noiseNSB268MHz_arr.pdf", n_samples=len(L0_digitalsum_noise))
     save_analyze_noise( data=L1_digitalsum_noise_arr.flatten(), pdf_file_out="L1_digitalsum_noiseNSB268MHz_arr.pdf", n_samples=len(L1_digitalsum_noise))
-    #
-    save_analyze_noise( data=wf_noise_blacklist_arr.flatten(), pdf_file_out="wf_noiseNSB268MHz_blacklist_arr.pdf", n_samples=len(wf_noise_blacklist))
-    save_analyze_noise( data=L0_digitalsum_noise_blacklist_arr.flatten(), pdf_file_out="L0_digitalsum_noiseNSB268MHz_blacklist_arr.pdf", n_samples=len(L0_digitalsum_noise_blacklist))
-    save_analyze_noise( data=L1_digitalsum_noise_blacklist_arr.flatten(), pdf_file_out="L1_digitalsum_noiseNSB268MHz_blacklist_arr.pdf", n_samples=len(L1_digitalsum_noise_blacklist))
+    save_analyze_noise( data=L3_digitalsum_noise_arr.flatten(), pdf_file_out="L3_digitalsum_noiseNSB268MHz_arr.pdf", n_samples=len(L3_digitalsum_noise))
+    save_analyze_noise( data=L3_digitalsum_noise_all_arr.flatten(), pdf_file_out="L3_digitalsum_noiseNSB268MHz_arr_all.pdf", n_samples=len(L3_digitalsum_noise_all))
     #
     return
     
-def evtloop_noise(datafilein, nevmax, pixel_mapping, L1_trigger_pixel_cluster_list, L3_trigger_DBSCAN_pixel_cluster_list):
+def evtloop_noise(datafilein, nevmax, pixel_mapping, L1_trigger_pixel_cluster_list, L3_trigger_DBSCAN_pixel_cluster_list, L3_trigger_DBSCAN_pixel_cluster_list_all):
     #
     print("evtloop_noise")
     #
@@ -310,11 +292,9 @@ def evtloop_noise(datafilein, nevmax, pixel_mapping, L1_trigger_pixel_cluster_li
     wf_trigger_pixel_list=np.reshape(wf_trigger_pixel_list,(pixel_mapping.shape[0],1))
     #
     wf_noise_list=[]
-    wf_noise_blacklist_list=[]
-    L0_digitalsum_noise_list=[]
-    L0_digitalsum_noise_blacklist_list=[]
     L1_digitalsum_noise_list=[]
-    L1_digitalsum_noise_blacklist_list=[]
+    L3_digitalsum_noise_list=[]
+    L3_digitalsum_noise_list_all=[]
     #
     for ev in sf:
         #
@@ -328,19 +308,14 @@ def evtloop_noise(datafilein, nevmax, pixel_mapping, L1_trigger_pixel_cluster_li
             n_pe_per_tel_list.append(int(ev['photoelectrons'][i-1]['n_pe']))
             LSTID_list.append(int(i-1))
         #
-        #
-        L0_digitalsum_list=[]
         for wf, npe, lst_id in zip( wf_list, n_pe_per_tel_list, LSTID_list) :
             try:
                 if npe == _npe_noise:
                     if(len(wf_noise_list)<_n_max_noise_events):
-                        channels_blacklist=np.unique(np.reshape(np.array(ev['photoelectrons'][lst_id]['pixel_id']),(npe,1)))
                         wf_noise_list.append(wf)
-                        wf_noise_blacklist_list.append(digital_w_sum(wf=wf, digi_sum_channel_list=wf_trigger_pixel_list, channels_blacklist=channels_blacklist))
-                        L0_digitalsum_noise_list.append(digital_sum(wf=wf, digi_sum_channel_list=L0_trigger_pixel_cluster_list))
-                        L0_digitalsum_noise_blacklist_list.append(digital_w_sum(wf=wf, digi_sum_channel_list=L0_trigger_pixel_cluster_list, channels_blacklist=channels_blacklist))
-                        L1_digitalsum_noise_blacklist_list.append(digital_w_sum(wf=wf, digi_sum_channel_list=L1_trigger_DBSCAN_pixel_cluster_list, channels_blacklist=channels_blacklist))
-                        L1_digitalsum_noise_list.append(digital_sum(wf=wf, digi_sum_channel_list=L1_trigger_DBSCAN_pixel_cluster_list))
+                        L1_digitalsum_noise_list.append(digital_sum(wf=wf, digi_sum_channel_list=L1_trigger_pixel_cluster_list))
+                        L3_digitalsum_noise_list.append(digital_sum(wf=wf, digi_sum_channel_list=L3_trigger_DBSCAN_pixel_cluster_list))
+                        L3_digitalsum_noise_list_all.append(digital_sum(wf=wf, digi_sum_channel_list=L3_trigger_DBSCAN_pixel_cluster_list_all))
             except:
                 pass
         #
@@ -356,20 +331,17 @@ def evtloop_noise(datafilein, nevmax, pixel_mapping, L1_trigger_pixel_cluster_li
         
     sf.close()
     #
-    print("L0_digitalsum_noise_list                    ",len(L0_digitalsum_noise_list))
-    print("L0_digitalsum_noise_blacklist_list          ",len(L0_digitalsum_noise_blacklist_list))
-    print("L0_digitalsum_noise_list[0].shape           ",L0_digitalsum_noise_list[0].shape)
-    print("L0_digitalsum_noise_blacklist_list[0].shape ",L0_digitalsum_noise_blacklist_list[0].shape)
+    print("L1_digitalsum_noise_list          ",len(L1_digitalsum_noise_list))
+    print("L1_digitalsum_noise_list[0].shape ",L1_digitalsum_noise_list[0].shape)
     #
     analyze_noise( wf_noise=wf_noise_list,
-                   wf_noise_blacklist=wf_noise_blacklist_list,
-                   L0_digitalsum_noise=L0_digitalsum_noise_list,
                    L1_digitalsum_noise=L1_digitalsum_noise_list,
-                   L0_digitalsum_noise_blacklist=L0_digitalsum_noise_blacklist_list,
-                   L1_digitalsum_noise_blacklist=L1_digitalsum_noise_blacklist_list)
+                   L3_digitalsum_noise=L3_digitalsum_noise_list,
+                   L3_digitalsum_noise_all=L3_digitalsum_noise_list_all)
     #        
     return
 
+'''
 def evtloop(datafilein, nevmax, pixel_mapping, L1_trigger_pixel_cluster_list, L3_trigger_DBSCAN_pixel_cluster_list):
     #
     print("evtloop")
@@ -443,13 +415,13 @@ def evtloop(datafilein, nevmax, pixel_mapping, L1_trigger_pixel_cluster_list, L3
     sf.close()
     
     return  event_info_list
-
+'''
     
 def main():
     pass
     
 if __name__ == "__main__":
-    if (len(sys.argv)==8 and (str(sys.argv[1]) == "--noise")):
+    if (len(sys.argv)==9 and (str(sys.argv[1]) == "--noise")):
         #
         simtelIn = str(sys.argv[2])
         headeroutpkl = str(sys.argv[3])
@@ -457,6 +429,7 @@ if __name__ == "__main__":
         pixel_mapping_csv = str(sys.argv[5])
         isolated_flower_seed_super_flower_csv = str(sys.argv[6])
         isolated_flower_seed_flower_csv = str(sys.argv[7])
+        all_seed_flower_csv = str(sys.argv[8])
         #
         print("sys.argv[1]                           = ", sys.argv[1])
         print("simtelIn                              = ", simtelIn)
@@ -465,19 +438,24 @@ if __name__ == "__main__":
         print("pixel_mapping_csv                     = ", pixel_mapping_csv)
         print("isolated_flower_seed_super_flower_csv = ", isolated_flower_seed_super_flower_csv)
         print("isolated_flower_seed_flower_csv       = ", isolated_flower_seed_flower_csv)
+        print("all_seed_flower_csv                   = ", all_seed_flower_csv)
         #
         print_setup()
         #
         pixel_mapping = np.genfromtxt(pixel_mapping_csv)
         isolated_flower_seed_flower = np.genfromtxt(isolated_flower_seed_flower_csv,dtype=int) 
         isolated_flower_seed_super_flower = np.genfromtxt(isolated_flower_seed_super_flower_csv,dtype=int)
+        all_seed_flower = np.genfromtxt(all_seed_flower_csv,dtype=int)
         #
         evtloop_noise( datafilein=simtelIn, nevmax=-1,
                        pixel_mapping=pixel_mapping,
-                       L0_trigger_pixel_cluster_list=isolated_flower_seed_super_flower,
-                       L1_trigger_DBSCAN_pixel_cluster_list=isolated_flower_seed_flower)
+                       L1_trigger_pixel_cluster_list=isolated_flower_seed_super_flower,
+                       L3_trigger_DBSCAN_pixel_cluster_list=isolated_flower_seed_flower,
+                       L3_trigger_DBSCAN_pixel_cluster_list_all=all_seed_flower)
         #
-    elif (len(sys.argv)==8 and (str(sys.argv[1]) == "--trg")):
+    elif (len(sys.argv)==9 and (str(sys.argv[1]) == "--trg")):
+        pass
+        '''
         #
         simtelIn = str(sys.argv[2])
         headeroutpkl = str(sys.argv[3])
@@ -485,6 +463,7 @@ if __name__ == "__main__":
         pixel_mapping_csv = str(sys.argv[5])
         isolated_flower_seed_super_flower_csv = str(sys.argv[6])
         isolated_flower_seed_flower_csv = str(sys.argv[7])
+        all_seed_flower_csv = str(sys.argv[8])
         #
         print("sys.argv[1]                           = ", sys.argv[1])
         print("simtelIn                              = ", simtelIn)
@@ -493,6 +472,7 @@ if __name__ == "__main__":
         print("pixel_mapping_csv                     = ", pixel_mapping_csv)
         print("isolated_flower_seed_super_flower_csv = ", isolated_flower_seed_super_flower_csv)
         print("isolated_flower_seed_flower_csv       = ", isolated_flower_seed_flower_csv)
+        print("all_seed_flower_csv                   = ", all_seed_flower_csv)
         #
         print_setup()
         #
@@ -505,6 +485,7 @@ if __name__ == "__main__":
                  L1_trigger_pixel_cluster_list=isolated_flower_seed_super_flower,
                  L3_trigger_DBSCAN_pixel_cluster_list=isolated_flower_seed_flower)
         #
+        '''
     else:
         print(" --> HELP info")
         print("len(sys.argv) = ",len(sys.argv))
@@ -517,7 +498,8 @@ if __name__ == "__main__":
         print(" [5] pixel_mapping_csv")
         print(" [6] isolated_flower_seed_super_flower_csv")
         print(" [7] isolated_flower_seed_flower_csv")
-        print(" ---> for noise")
+        print(" [8] all_seed_flower_csv")
+        print(" ---> for events")
         print(" [1] --trg")
         print(" [2] simtelIn")
         print(" [3] headeroutpkl")
@@ -525,3 +507,4 @@ if __name__ == "__main__":
         print(" [5] pixel_mapping_csv")
         print(" [6] isolated_flower_seed_super_flower_csv")
         print(" [7] isolated_flower_seed_flower_csv")
+        print(" [8] all_seed_flower_csv")
