@@ -23,22 +23,27 @@ _n_of_time_sample=75
 _time_of_one_sample_s=(_n_of_time_sample*1000/1024.0*1.0e-9)
 _event_modulo=1
 #
-_time_norm=0.05
+#
+_time_norm=0.09
+_DBSCAN_eps = 0.1
+_DBSCAN_digitalsum_threshold_isolated = 2150
 _DBSCAN_digitalsum_threshold = 2150
-_DBSCAN_eps = 0.2
+_DBSCAN_min_samples_isolated = 3
 _DBSCAN_min_samples = 15
 #
 #
 
 def print_setup():
-    print("_n_max_noise_events          = ",_n_max_noise_events)
-    print("_npe_noise                   = ",_npe_noise)
-    print("_time_of_one_sample_s        = ",_time_of_one_sample_s)
-    print("_event_modulo                = ",_event_modulo)
-    print("_time_norm                   = ",_time_norm)
-    print("_DBSCAN_digitalsum_threshold = ",_DBSCAN_digitalsum_threshold)
-    print("_DBSCAN_eps                  = ", _DBSCAN_eps)
-    print("_DBSCAN_min_samples          = ",_DBSCAN_min_samples)
+    print("_n_max_noise_events                   = ",_n_max_noise_events)
+    print("_npe_noise                            = ",_npe_noise)
+    print("_time_of_one_sample_s                 = ",_time_of_one_sample_s)
+    print("_event_modulo                         = ",_event_modulo)
+    print("_time_norm                            = ",_time_norm)
+    print("_DBSCAN_eps                           = ",_DBSCAN_eps)
+    print("_DBSCAN_digitalsum_threshold_isolated = ",_DBSCAN_digitalsum_threshold_isolated)
+    print("_DBSCAN_min_samples_isolated          = ",_DBSCAN_min_samples_isolated)
+    print("_DBSCAN_digitalsum_threshold          = ",_DBSCAN_digitalsum_threshold)
+    print("_DBSCAN_min_samples                   = ",_DBSCAN_min_samples)
     
 def extend_pixel_mapping( pixel_mapping, channel_list, number_of_wf_time_samples):
     pixel_mapping_extended=pixel_mapping[channel_list[:,0]].copy()
@@ -65,70 +70,21 @@ def get_DBSCAN_clusters( digitalsum, pixel_mapping, pixel_mapping_extended, chan
     X=X*[[1,1,time_norm]]
     dbscan = DBSCAN( eps = DBSCAN_eps, min_samples = DBSCAN_min_samples)
     clusters = dbscan.fit_predict(X)
-    pointID = np.unique(clusters)
-    print(pointID)
-    
-    #time_norm_arr=np.array([[1,1,time_norm]])
-    #time_norm_arr=np.concatenate(([time_norm_arr for i in np.arange(0,points.shape[0])]), axis=0)
-    #print(time_norm_arr.shape)
-    #print(points.shape)
-    #print(time_norm_arr)
-    #print(points)
-    #print()
-    #if (pixel_mapping_extended.shape[0]>0):
-
-    #print(pixel_mapping_extended[:,:,2]*)
-    #print(channel_list[:,0])
-    #pixel_mapping_filtered=pixel_mapping[channel_list[:,0]].copy()
-    #print(pixel_mapping_filtered.shape)
+    clustersID = np.unique(clusters)
     #
-    #pix_x=pixel_mapping_extended[:,0].reshape(pixel_mapping_extended.shape[0],1)
-    #pix_y=pixel_mapping_extended[:,1].reshape(pixel_mapping_extended.shape[0],1)
-    #pix_x=np.concatenate(([pix_x for i in np.arange(0,digitalsum.shape[1])]), axis=1)
-    #pix_y=np.concatenate(([pix_y for i in np.arange(0,digitalsum.shape[1])]), axis=1)
+    clusters_info['n_digitalsum_points'] = len(X)
     #
-    #pix_t=np.array([i for i in np.arange(0,digitalsum.shape[1])]).reshape(1,digitalsum.shape[1])
-    #pix_t=pix_t*time_norm
-    #pix_t=np.concatenate(([pix_t for i in np.arange(0,digitalsum.shape[0])]), axis=0)
-    ##
-    #pix_x=pix_x[digitalsum>digitalsum_threshold]
-    #pix_y=pix_y[digitalsum>digitalsum_threshold]
-    #pix_t=pix_t[digitalsum>digitalsum_threshold]  
-    ##
-    #pix_x=np.expand_dims(pix_x,axis=1)
-    #pix_y=np.expand_dims(pix_y,axis=1)
-    #pix_t=np.expand_dims(pix_t,axis=1)
-    #
-    #print(pix_x.shape)
-    #print(pix_y.shape)
-    #print(pix_t.shape)
-    #
-    #X=np.concatenate((pix_x,pix_y,pix_t), axis=1)
-    #dbscan = DBSCAN( eps = DBSCAN_eps, min_samples = DBSCAN_min_samples)
-    #clusters = dbscan.fit_predict(X)
-    #pointID = np.unique(clusters)
-    ##
-    #
-    #clusters_info['n_digitalsum_points'] = len(pix_x)
-    #
-    #if len(pointID) > 1 :
-    #    pointID = pointID[pointID>-1]
-        #print(pointID)
-    #    clustersID = np.argmax([len(clusters[clusters==clID]) for clID in pointID])            
+    if (len(clustersID) > 1) :
+        clustersID = clustersID[clustersID>-1]
+        clustersIDmax = np.argmax([len(clusters[clusters==clID]) for clID in clustersID])
         #
-    #    clusters_info['n_clusters'] = len(pointID)
-    #    clusters_info['n_points'] = len(clusters[clusters==clustersID])
-    #    clusters_info['x_mean'] = np.mean(pix_x[clusters==clustersID])
-    #    clusters_info['y_mean'] = np.mean(pix_y[clusters==clustersID])
-    #    clusters_info['t_mean'] = np.mean(pix_t[clusters==clustersID])
+        clusters_info['n_clusters'] = len(clustersID)
+        clusters_info['n_points'] = len(clusters[clusters==clustersIDmax])
         #
-    #    clusters_info['channelID'] = get_channelID_from_x_y( pixel_mapping_extended=pixel_mapping_extended, x_val=clusters_info['x_mean'], y_val=clusters_info['y_mean'])
-    #    clusters_info['timeID'] = get_timeID( number_of_time_points=digitalsum.shape[1], time_norm=time_norm, t_val=clusters_info['t_mean'])
-        #
-        #clustern = np.max([ for clID in np.unique(clusters)[1:]])
-        #clustern = 0
-        #print(len(cl_ID))
-        #print(clustern)
+        clusters_info['x_mean'] = np.mean(X[clusters==clustersIDmax][0])
+        clusters_info['y_mean'] = np.mean(X[clusters==clustersIDmax][1])
+        clusters_info['t_mean'] = np.mean(X[clusters==clustersIDmax][2])
+    #    
     #
     return clusters_info
     
@@ -335,7 +291,7 @@ def analyze_noise( wf_noise, wf_noise_blacklist,
     #
     return
     
-def evtloop_noise(datafilein, nevmax, pixel_mapping, L0_trigger_pixel_cluster_list, L1_trigger_DBSCAN_pixel_cluster_list):
+def evtloop_noise(datafilein, nevmax, pixel_mapping, L1_trigger_pixel_cluster_list, L3_trigger_DBSCAN_pixel_cluster_list):
     #
     print("evtloop_noise")
     #
@@ -463,7 +419,8 @@ def evtloop(datafilein, nevmax, pixel_mapping, L1_trigger_pixel_cluster_list, L3
                                                             digitalsum_threshold = _DBSCAN_digitalsum_threshold,
                                                             DBSCAN_eps = _DBSCAN_eps,
                                                             DBSCAN_min_samples = _DBSCAN_min_samples)
-                #print_trigger_info(trigger_info=DBSCAN_clusters_info)
+                print("npe = ",npe)
+                print_trigger_info(trigger_info=DBSCAN_clusters_info)
             except:
                 L1_trigger_info=def_L1_trigger_info()
                 DBSCAN_clusters_info = def_clusters_info()
@@ -471,39 +428,6 @@ def evtloop(datafilein, nevmax, pixel_mapping, L1_trigger_pixel_cluster_list, L3
             #
             L1_trigger_info_list.append(L1_trigger_info)
             DBSCAN_clusters_info_list.append(DBSCAN_clusters_info)
-        #
-        #
-        
-        #clusters_info['event_ID'] = int(ev['event_id'])
-        #clusters_info_list.append(clusters_info)
-        #
-        #event_info_list.append([ev['event_id'],
-        #                        ev['mc_shower']['energy'],
-        #                        ev['mc_shower']['azimuth'],
-        #                        ev['mc_shower']['altitude'],
-        #                        ev['mc_shower']['h_first_int'],
-        #                        ev['mc_shower']['xmax'],
-        #                        ev['mc_shower']['hmax'],
-        #                        ev['mc_shower']['emax'],
-        #                        ev['mc_shower']['cmax'],
-        #                        ev['mc_event']['xcore'],
-        #                        ev['mc_event']['ycore'],
-        #                        ev['telescope_events'][1]['header']['readout_time'],
-        #                        len(ev['photons'][0]),
-        #                        ev['photoelectrons'][0]['n_pe'],
-        #                        (ev['photoelectrons'][0]['n_pixels']-np.sum(ev['photoelectrons'][0]['photoelectrons']==0)),
-        #                        clusters_info['event_ID'],
-        #                        clusters_info['n_digitalsum_points'],
-        #                        clusters_info['n_clusters'],
-        #                        clusters_info['n_points'],
-        #                        clusters_info['x_mean'],
-        #                        clusters_info['y_mean'],
-        #                        clusters_info['t_mean'],
-        #                        clusters_info['channelID'],
-        #                        clusters_info['timeID']])                               
-        # 
-        #
-        #print(clusters_info)
         #
         ev_counter=ev_counter+1
         #
@@ -576,7 +500,7 @@ if __name__ == "__main__":
         isolated_flower_seed_flower = np.genfromtxt(isolated_flower_seed_flower_csv,dtype=int) 
         isolated_flower_seed_super_flower = np.genfromtxt(isolated_flower_seed_super_flower_csv,dtype=int)
         #
-        evtloop( datafilein=simtelIn, nevmax=-1,
+        evtloop( datafilein=simtelIn, nevmax=100,
                  pixel_mapping=pixel_mapping,
                  L1_trigger_pixel_cluster_list=isolated_flower_seed_super_flower,
                  L3_trigger_DBSCAN_pixel_cluster_list=isolated_flower_seed_flower)

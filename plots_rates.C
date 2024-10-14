@@ -12,6 +12,7 @@
 using namespace std;
 
 void read_file(TString name, TH1D *h1, TGraphErrors *gr);
+void read_root_file(TString name, TH1D *h1, Double_t h1_norm, TH1D *h1_rate,TGraphErrors *gr);
 
 Int_t plots_rates(){
   //
@@ -28,6 +29,16 @@ Int_t plots_rates(){
   gr_wf_noise_vs_thADC->SetNameTitle("gr_wf_noise_vs_thADC_bl","gr_wf_noise_vs_thADC_bl");
   //
   //
+  TH1D *h1_isolated_flower;// = new TH1D();
+  //h1_isolated_flower->SetNameTitle("h1_isolated_flower","h1_isolated_flower");
+  //
+  TH1D *h1_isolated_flower_rate;// = new TH1D();
+  //h1_isolated_flower_rate->SetNameTitle("h1_isolated_flower_rate","h1_isolated_flower_rate");
+  //
+  TGraphErrors *gr_isolated_flower_rate = new TGraphErrors();
+  gr_isolated_flower_rate->SetNameTitle("gr_isolated_flower_rate","gr_isolated_flower_rate");
+  //
+  //
   //read_file("wf_noise_arr.pdf_rates.pdf.csv", h1_wf_noise, gr_wf_noise_vs_thADC);
   //read_file("wf_noise_blacklist_arr.pdf_rates.pdf.csv", h1_wf_noise_bl, gr_wf_noise_vs_thADC_bl);
   //read_file("wf_noiseNSB268MHz_arr.pdf_rates.pdf.csv", h1_wf_noise, gr_wf_noise_vs_thADC);
@@ -40,8 +51,16 @@ Int_t plots_rates(){
   //
   //read_file("L1_digitalsum_noise_arr.pdf_rates.pdf.csv", h1_wf_noise, gr_wf_noise_vs_thADC);
   //read_file("L1_digitalsum_noise_blacklist_arr.pdf_rates.pdf.csv", h1_wf_noise_bl, gr_wf_noise_vs_thADC_bl);
+  //
+  //
+  //
   read_file("L1_digitalsum_noiseNSB268MHz_arr.pdf_rates.pdf.csv", h1_wf_noise, gr_wf_noise_vs_thADC);
   read_file("L1_digitalsum_noiseNSB268MHz_blacklist_arr.pdf_rates.pdf.csv", h1_wf_noise_bl, gr_wf_noise_vs_thADC_bl);
+  //
+  TFile *f01 = new TFile("hist_trgB_corsika_run1.root");
+  h1_isolated_flower = (TH1D*)f01->Get("h1_digital_sum");
+  h1_isolated_flower_rate = (TH1D*)f01->Get("h1_digital_sum_rate");  
+  //read_root_file("hist_trgB_corsika_run1.root", h1_isolated_flower, 1.0, h1_isolated_flower_rate, gr_isolated_flower_rate);
   //
   //
   //
@@ -82,6 +101,7 @@ Int_t plots_rates(){
   h1_wf_noise_bl->SetTitle("");
   h1_wf_noise_bl->Draw();
   h1_wf_noise->Draw("sames");
+  h1_isolated_flower->Draw("sames");
   //
   h1_wf_noise_bl->GetXaxis()->SetTitle("ADC counts");
   //
@@ -96,12 +116,14 @@ Int_t plots_rates(){
   mg->Add(gr_wf_noise_vs_thADC_bl);
   //
   mg->Draw("apl");
+  h1_isolated_flower_rate->Draw("sames");
   //
   mg->SetMaximum(1.0e+14);
   mg->SetMinimum(1.0e+1);
   //
   mg->GetXaxis()->SetTitle("ADC counts");
   mg->GetYaxis()->SetTitle("Rate, Hz");
+
   //  
   /*
   TLegend *leg = new TLegend(0.6,0.6,0.9,0.9,"","brNDC");
@@ -154,13 +176,13 @@ void read_file(TString name, TH1D *h1, TGraphErrors *gr){
     while(fFile>>thresholds>>counts>>rates){
       if(counter == 1){
 	binwidth = thresholds - thresholdsf;
-	gr->SetPoint(gr->GetN(),thresholdsf + binwidth/2,ratesf);
+	gr->SetPoint(gr->GetN(),thresholdsf + binwidth/2-5,ratesf);
 	gr->SetPointError(gr->GetN()-1,0.0,rates*0.0);
-	gr_tmp->SetPoint(gr_tmp->GetN(),thresholdsf + binwidth/2,countsf);
+	gr_tmp->SetPoint(gr_tmp->GetN(),thresholdsf + binwidth/2-5,countsf);
       }
-      gr->SetPoint(gr->GetN(),thresholds + binwidth/2,rates);
+      gr->SetPoint(gr->GetN(),thresholds + binwidth/2-5,rates);
       gr->SetPointError(gr->GetN()-1,0.0,rates*0.0);
-      gr_tmp->SetPoint(gr_tmp->GetN(),thresholds + binwidth/2,counts);
+      gr_tmp->SetPoint(gr_tmp->GetN(),thresholds + binwidth/2-5,counts);
       counter++;
     }
     fFile.close();
@@ -170,13 +192,21 @@ void read_file(TString name, TH1D *h1, TGraphErrors *gr){
   Int_t nbins = counter;
   //
   gr_tmp->GetPoint( 0, binx, biny);
-  binmin = binx - binwidth/2;
+  binmin = binx - binwidth/2-0;
   gr_tmp->GetPoint((gr_tmp->GetN()-1), binx, biny);
-  binmax = binx + binwidth/2;
+  binmax = binx + binwidth/2-0;
   //
   h1->SetBins( nbins, binmin, binmax);
   for(Int_t i = 0; i<gr_tmp->GetN(); i++){
     gr_tmp->GetPoint(i, binx, biny);
-    h1->SetBinContent(i+1,biny);
+    h1->SetBinContent(i+1,biny/(6.11/1.791));
   }
+}
+
+void read_root_file(TString name, TH1D *h1, Double_t h1_norm, TH1D *h1_rate, TGraphErrors *gr){
+  //
+  TFile *f01 = new TFile(name.Data());
+  //
+  h1 = (TH1D*)f01->Get("h1_digital_sum");
+  h1_rate = (TH1D*)f01->Get("h1_digital_sum_rate");  
 }

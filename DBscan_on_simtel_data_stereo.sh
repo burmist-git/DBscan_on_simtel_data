@@ -26,8 +26,6 @@ else
 	python DBscan_on_simtel_data_stereo.py --trg $simtelIn $headeroutpkl $headeroutcsv $pixel_mapping_csv $isolated_flower_seed_super_flower_csv $isolated_flower_seed_flower_csv
     elif [ "$1" = "-n" ]; then
 	#
-	#dataOIdirPreff="../scratch/simtel_data/proton_st/"
-	#dataOI_npe_dirPreff="../scratch/simtel_data/proton_st/npe/"
 	dataOIdirPreff="../scratch/simtel_data/proton_st_NSB268MHz/"
 	dataOI_npe_dirPreff="../scratch/simtel_data/proton_st_NSB268MHz/npe/"
 	#
