@@ -17,11 +17,13 @@ import matplotlib.pyplot as plt
 
 #
 #
+#
 _n_max_noise_events=1000
 _npe_noise=20
 _n_of_time_sample=75
 _time_of_one_sample_s=(_n_of_time_sample*1000/1024.0*1.0e-9)
 _event_modulo=100
+#
 #
 #
 _time_norm=0.09
@@ -30,6 +32,7 @@ _DBSCAN_digitalsum_threshold_isolated = 2150
 _DBSCAN_digitalsum_threshold = 2150
 _DBSCAN_min_samples_isolated = 3
 _DBSCAN_min_samples = 15
+#
 #
 #
 
@@ -285,9 +288,6 @@ def evtloop_noise(datafilein, nevmax, pixel_mapping, L1_trigger_pixel_cluster_li
     toc = time.time()
     it_cout = 0
     #
-    event_info_list=[]
-    clusters_info_list=[]
-    #
     wf_trigger_pixel_list=np.array([i for i in np.arange(0,pixel_mapping.shape[0])])
     wf_trigger_pixel_list=np.reshape(wf_trigger_pixel_list,(pixel_mapping.shape[0],1))
     #
@@ -341,8 +341,7 @@ def evtloop_noise(datafilein, nevmax, pixel_mapping, L1_trigger_pixel_cluster_li
     #        
     return
 
-'''
-def evtloop(datafilein, nevmax, pixel_mapping, L1_trigger_pixel_cluster_list, L3_trigger_DBSCAN_pixel_cluster_list):
+def evtloop(datafilein, nevmax, pixel_mapping, L1_trigger_pixel_cluster_list, L3_trigger_DBSCAN_pixel_cluster_list, L3_trigger_DBSCAN_pixel_cluster_list_all):
     #
     print("evtloop")
     #
@@ -353,9 +352,6 @@ def evtloop(datafilein, nevmax, pixel_mapping, L1_trigger_pixel_cluster_list, L3
     tic = time.time()
     toc = time.time()
     it_cout = 0
-    #
-    digital_sum_threshold=[]
-    thresholds=np.linspace(6000, 7000, num=1000)
     #
     event_info_list=[]
     #
@@ -381,6 +377,7 @@ def evtloop(datafilein, nevmax, pixel_mapping, L1_trigger_pixel_cluster_list, L3
             try:                
                 L1_digitalsum = digital_sum(wf=wf, digi_sum_channel_list=L1_trigger_pixel_cluster_list)
                 L3_digitalsum = digital_sum(wf=wf, digi_sum_channel_list=L3_trigger_DBSCAN_pixel_cluster_list)
+                L3_digitalsum_all = digital_sum(wf=wf, digi_sum_channel_list=L3_trigger_DBSCAN_pixel_cluster_list_all)
                 L1_trigger_info = get_L1_trigger_info(digitalsum=L1_digitalsum, pixel_mapping=pixel_mapping, digi_sum_channel_list=L1_trigger_pixel_cluster_list)
                 #
                 DBSCAN_clusters_info = get_DBSCAN_clusters( digitalsum = L3_digitalsum,
@@ -415,7 +412,6 @@ def evtloop(datafilein, nevmax, pixel_mapping, L1_trigger_pixel_cluster_list, L3
     sf.close()
     
     return  event_info_list
-'''
     
 def main():
     pass
@@ -454,8 +450,6 @@ if __name__ == "__main__":
                        L3_trigger_DBSCAN_pixel_cluster_list_all=all_seed_flower)
         #
     elif (len(sys.argv)==9 and (str(sys.argv[1]) == "--trg")):
-        pass
-        '''
         #
         simtelIn = str(sys.argv[2])
         headeroutpkl = str(sys.argv[3])
@@ -479,13 +473,14 @@ if __name__ == "__main__":
         pixel_mapping = np.genfromtxt(pixel_mapping_csv)
         isolated_flower_seed_flower = np.genfromtxt(isolated_flower_seed_flower_csv,dtype=int) 
         isolated_flower_seed_super_flower = np.genfromtxt(isolated_flower_seed_super_flower_csv,dtype=int)
+        all_seed_flower = np.genfromtxt(all_seed_flower_csv,dtype=int)
         #
         evtloop( datafilein=simtelIn, nevmax=100,
                  pixel_mapping=pixel_mapping,
                  L1_trigger_pixel_cluster_list=isolated_flower_seed_super_flower,
-                 L3_trigger_DBSCAN_pixel_cluster_list=isolated_flower_seed_flower)
+                 L3_trigger_DBSCAN_pixel_cluster_list=isolated_flower_seed_flower,
+                 L3_trigger_DBSCAN_pixel_cluster_list_all=all_seed_flower)
         #
-        '''
     else:
         print(" --> HELP info")
         print("len(sys.argv) = ",len(sys.argv))

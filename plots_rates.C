@@ -23,10 +23,10 @@ Int_t plots_rates(){
   TGraphErrors *gr_wf_noise_vs_thADC = new TGraphErrors();
   gr_wf_noise_vs_thADC->SetNameTitle("gr_wf_noise_vs_thADC","gr_wf_noise_vs_thADC");
   //
-  TH1D *h1_wf_noise_bl = new TH1D();
-  h1_wf_noise_bl->SetNameTitle("h1_wf_noise_bl","h1_wf_noise_bl");
-  TGraphErrors *gr_wf_noise_vs_thADC_bl = new TGraphErrors();
-  gr_wf_noise_vs_thADC->SetNameTitle("gr_wf_noise_vs_thADC_bl","gr_wf_noise_vs_thADC_bl");
+  //TH1D *h1_wf_noise_bl = new TH1D();
+  //h1_wf_noise_bl->SetNameTitle("h1_wf_noise_bl","h1_wf_noise_bl");
+  //TGraphErrors *gr_wf_noise_vs_thADC_bl = new TGraphErrors();
+  //gr_wf_noise_vs_thADC->SetNameTitle("gr_wf_noise_vs_thADC_bl","gr_wf_noise_vs_thADC_bl");
   //
   //
   TH1D *h1_isolated_flower;// = new TH1D();
@@ -35,27 +35,30 @@ Int_t plots_rates(){
   TH1D *h1_isolated_flower_rate;// = new TH1D();
   //h1_isolated_flower_rate->SetNameTitle("h1_isolated_flower_rate","h1_isolated_flower_rate");
   //
-  TGraphErrors *gr_isolated_flower_rate = new TGraphErrors();
-  gr_isolated_flower_rate->SetNameTitle("gr_isolated_flower_rate","gr_isolated_flower_rate");
+  //TGraphErrors *gr_isolated_flower_rate = new TGraphErrors();
+  //gr_isolated_flower_rate->SetNameTitle("gr_isolated_flower_rate","gr_isolated_flower_rate");
   //
   //
   //read_file("wf_noise_arr.pdf_rates.pdf.csv", h1_wf_noise, gr_wf_noise_vs_thADC);
   //read_file("wf_noise_blacklist_arr.pdf_rates.pdf.csv", h1_wf_noise_bl, gr_wf_noise_vs_thADC_bl);
   //read_file("wf_noiseNSB268MHz_arr.pdf_rates.pdf.csv", h1_wf_noise, gr_wf_noise_vs_thADC);
-  //read_file("wf_noiseNSB268MHz_blacklist_arr.pdf_rates.pdf.csv", h1_wf_noise_bl, gr_wf_noise_vs_thADC_bl);
+  //
   //
   //read_file("L0_digitalsum_noise_arr.pdf_rates.pdf.csv", h1_wf_noise, gr_wf_noise_vs_thADC);
   //read_file("L0_digitalsum_noise_blacklist_arr.pdf_rates.pdf.csv", h1_wf_noise_bl, gr_wf_noise_vs_thADC_bl);
   //read_file("L0_digitalsum_noiseNSB268MHz_arr.pdf_rates.pdf.csv", h1_wf_noise, gr_wf_noise_vs_thADC);
-  //read_file("L0_digitalsum_noiseNSB268MHz_blacklist_arr.pdf_rates.pdf.csv", h1_wf_noise_bl, gr_wf_noise_vs_thADC_bl);
+
   //
   //read_file("L1_digitalsum_noise_arr.pdf_rates.pdf.csv", h1_wf_noise, gr_wf_noise_vs_thADC);
-  //read_file("L1_digitalsum_noise_blacklist_arr.pdf_rates.pdf.csv", h1_wf_noise_bl, gr_wf_noise_vs_thADC_bl);
+
   //
   //
   //
   read_file("L1_digitalsum_noiseNSB268MHz_arr.pdf_rates.pdf.csv", h1_wf_noise, gr_wf_noise_vs_thADC);
-  read_file("L1_digitalsum_noiseNSB268MHz_blacklist_arr.pdf_rates.pdf.csv", h1_wf_noise_bl, gr_wf_noise_vs_thADC_bl);
+  //read_file("wf_noiseNSB268MHz_blacklist_arr.pdf_rates.pdf.csv", h1_wf_noise_bl, gr_wf_noise_vs_thADC_bl);
+  //read_file("L0_digitalsum_noiseNSB268MHz_blacklist_arr.pdf_rates.pdf.csv", h1_wf_noise_bl, gr_wf_noise_vs_thADC_bl);
+  //read_file("L1_digitalsum_noise_blacklist_arr.pdf_rates.pdf.csv", h1_wf_noise_bl, gr_wf_noise_vs_thADC_bl);
+  //read_file("L1_digitalsum_noiseNSB268MHz_blacklist_arr.pdf_rates.pdf.csv", h1_wf_noise_bl, gr_wf_noise_vs_thADC_bl);
   //
   TFile *f01 = new TFile("hist_trgB_corsika_run1.root");
   h1_isolated_flower = (TH1D*)f01->Get("h1_digital_sum");
@@ -74,17 +77,20 @@ Int_t plots_rates(){
   //  
   //
   //
-  h1_wf_noise_bl->SetLineColor(kBlack);
-  h1_wf_noise_bl->SetLineWidth(3.0);
-  h1_wf_noise->SetLineColor(kRed);
+  //h1_wf_noise_bl->SetLineColor(kBlack);
+  //h1_wf_noise_bl->SetLineWidth(3.0);
+  //h1_wf_noise->SetLineColor(kRed);
+  h1_wf_noise->SetLineColor(kBlack);
   h1_wf_noise->SetLineWidth(3.0);
   //
-  gr_wf_noise_vs_thADC_bl->SetLineColor(kBlack);
-  gr_wf_noise_vs_thADC_bl->SetMarkerColor(kBlack);
-  gr_wf_noise_vs_thADC_bl->SetLineWidth(3.0);
+  //gr_wf_noise_vs_thADC_bl->SetLineColor(kBlack);
+  //gr_wf_noise_vs_thADC_bl->SetMarkerColor(kBlack);
+  //gr_wf_noise_vs_thADC_bl->SetLineWidth(3.0);
   //
-  gr_wf_noise_vs_thADC->SetLineColor(kRed);
-  gr_wf_noise_vs_thADC->SetMarkerColor(kRed);
+  //gr_wf_noise_vs_thADC->SetLineColor(kRed);
+  //gr_wf_noise_vs_thADC->SetMarkerColor(kRed);
+  gr_wf_noise_vs_thADC->SetLineColor(kBlack);
+  gr_wf_noise_vs_thADC->SetMarkerColor(kBlack);
   gr_wf_noise_vs_thADC->SetLineWidth(3.0);
   //
   //gr_wf_noise_vs_thADC->Draw("APL");
@@ -98,12 +104,15 @@ Int_t plots_rates(){
   gPad->SetLogy();
   gPad->SetGridx();
   gPad->SetGridy();
-  h1_wf_noise_bl->SetTitle("");
-  h1_wf_noise_bl->Draw();
-  h1_wf_noise->Draw("sames");
+  //h1_wf_noise_bl->SetTitle("");
+  //h1_wf_noise_bl->Draw();
+  //h1_wf_noise->Draw("sames");
+  h1_wf_noise->SetTitle("");
+  h1_wf_noise->Draw();
   h1_isolated_flower->Draw("sames");
   //
-  h1_wf_noise_bl->GetXaxis()->SetTitle("ADC counts");
+  //h1_wf_noise_bl->GetXaxis()->SetTitle("ADC counts");
+  h1_wf_noise->GetXaxis()->SetTitle("ADC counts");
   //
   c1->cd(2);
   //
@@ -113,7 +122,10 @@ Int_t plots_rates(){
   //
   TMultiGraph *mg = new TMultiGraph();
   mg->Add(gr_wf_noise_vs_thADC);
-  mg->Add(gr_wf_noise_vs_thADC_bl);
+  //mg->Add(gr_wf_noise_vs_thADC_bl);
+  //
+  //mg->Add(gr_wf_noise_vs_thADC);
+  //mg->Add(gr_wf_noise_vs_thADC_bl);
   //
   mg->Draw("apl");
   h1_isolated_flower_rate->Draw("sames");
@@ -176,13 +188,13 @@ void read_file(TString name, TH1D *h1, TGraphErrors *gr){
     while(fFile>>thresholds>>counts>>rates){
       if(counter == 1){
 	binwidth = thresholds - thresholdsf;
-	gr->SetPoint(gr->GetN(),thresholdsf + binwidth/2-5,ratesf);
+	gr->SetPoint(gr->GetN(),thresholdsf + binwidth/2,ratesf);
 	gr->SetPointError(gr->GetN()-1,0.0,rates*0.0);
-	gr_tmp->SetPoint(gr_tmp->GetN(),thresholdsf + binwidth/2-5,countsf);
+	gr_tmp->SetPoint(gr_tmp->GetN(),thresholdsf + binwidth/2,countsf);
       }
-      gr->SetPoint(gr->GetN(),thresholds + binwidth/2-5,rates);
+      gr->SetPoint(gr->GetN(),thresholds + binwidth/2,rates);
       gr->SetPointError(gr->GetN()-1,0.0,rates*0.0);
-      gr_tmp->SetPoint(gr_tmp->GetN(),thresholds + binwidth/2-5,counts);
+      gr_tmp->SetPoint(gr_tmp->GetN(),thresholds + binwidth/2,counts);
       counter++;
     }
     fFile.close();
