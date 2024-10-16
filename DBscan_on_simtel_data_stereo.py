@@ -15,7 +15,7 @@ import time
 from sklearn.cluster import DBSCAN
 import matplotlib.pyplot as plt
 
-#
+###################################
 #
 #
 _n_max_noise_events=1000
@@ -26,15 +26,20 @@ _event_modulo=100
 #
 #
 #
-_time_norm=0.09
-_DBSCAN_eps = 0.1
-_DBSCAN_digitalsum_threshold_isolated = 2150
-_DBSCAN_digitalsum_threshold = 2150
+_time_norm_isolated=0.09
+_DBSCAN_eps_isolated = 0.11
+_DBSCAN_digitalsum_threshold_isolated = 2165
 _DBSCAN_min_samples_isolated = 3
+#
+#
+#
+_time_norm=0.06
+_DBSCAN_eps = 0.11
+_DBSCAN_digitalsum_threshold = 2160
 _DBSCAN_min_samples = 15
 #
 #
-#
+###################################
 
 def print_setup():
     print("_n_max_noise_events                   = ",_n_max_noise_events)
@@ -356,47 +361,263 @@ def evtloop(datafilein, nevmax, pixel_mapping, L1_trigger_pixel_cluster_list, L3
     event_info_list=[]
     #
     pixel_mapping_extended=extend_pixel_mapping( pixel_mapping=pixel_mapping, channel_list=L3_trigger_DBSCAN_pixel_cluster_list, number_of_wf_time_samples=_n_of_time_sample)
+    pixel_mapping_extended_all=extend_pixel_mapping( pixel_mapping=pixel_mapping, channel_list=L3_trigger_DBSCAN_pixel_cluster_list_all, number_of_wf_time_samples=_n_of_time_sample)
     #
     for ev in sf:
         #
-        LSTID=ev['telescope_events'].keys()
+        # ev['telescope_events'].keys() | [1, 2, 3, 4]
+        # ev['photoelectrons'].keys()   | [0, 1, 2, 3]
         #
+        LSTID=ev['telescope_events'].keys()
+        #print('ev')
+        #print(LSTID)
         #
         wf_list=[]
         n_pe_per_tel_list=[]
         LSTID_list=[]
-        L1_trigger_info_list=[]
-        DBSCAN_clusters_info_list=[]
+        #
+        #L1_trigger_info_list=[]
+        #DBSCAN_clusters_info_list=[]
+        #DBSCAN_clusters_info_isolated_list=[]
+        #
+        L1_trigger_info_LST1=None
+        L1_trigger_info_LST2=None
+        L1_trigger_info_LST3=None
+        L1_trigger_info_LST4=None
+        DBSCAN_clusters_info_LST1=None
+        DBSCAN_clusters_info_LST2=None
+        DBSCAN_clusters_info_LST3=None
+        DBSCAN_clusters_info_LST4=None
+        DBSCAN_clusters_info_isolated_LST1=None
+        DBSCAN_clusters_info_isolated_LST2=None
+        DBSCAN_clusters_info_isolated_LST3=None
+        DBSCAN_clusters_info_isolated_LST4=None
+        #
+        #
+        ev_time=[0,0,0,0]
+        nphotons=[0,0,0,0]
+        n_pe=[0,0,0,0]
+        n_pixels=[0,0,0,0]
+        #
+        #
         for i in LSTID :
             wf_list.append(ev['telescope_events'][i]['adc_samples'][0])
             n_pe_per_tel_list.append(int(ev['photoelectrons'][i-1]['n_pe']))
             LSTID_list.append(int(i-1))
+            #
+            #
+            ev_time[(i-1)] = float(ev['telescope_events'][i]['header']['readout_time'])
+            nphotons[(i-1)]=int(len(ev['photons'][(i-1)]))
+            n_pe[(i-1)]=int(ev['photoelectrons'][(i-1)]['n_pe'])
+            n_pixels[(i-1)]=int(ev['photoelectrons'][(i-1)]['n_pixels']-np.sum(ev['photoelectrons'][(i-1)]['photoelectrons']==0))
+            #
+            #
         #
+        #
+        for i in np.arange(0,len(n_pe)) :
+            if (n_pe[i] == 0 and i == 0) :
+                L1_trigger_info_LST1 = def_L1_trigger_info()
+                DBSCAN_clusters_info_isolated_LST1 = def_clusters_info()
+                DBSCAN_clusters_info_LST1 = def_clusters_info()
+            elif (n_pe[i] == 0 and i == 1) :
+                L1_trigger_info_LST2 = def_L1_trigger_info()
+                DBSCAN_clusters_info_isolated_LST2 = def_clusters_info()
+                DBSCAN_clusters_info_LST2 = def_clusters_info()
+            elif (n_pe[i] == 0 and i == 2) :
+                L1_trigger_info_LST3 = def_L1_trigger_info()
+                DBSCAN_clusters_info_isolated_LST3 = def_clusters_info()
+                DBSCAN_clusters_info_LST3 = def_clusters_info()
+            elif (n_pe[i] == 0 and i == 3) :
+                L1_trigger_info_LST4 = def_L1_trigger_info()
+                DBSCAN_clusters_info_isolated_LST4 = def_clusters_info()
+                DBSCAN_clusters_info_LST4 = def_clusters_info()                
+        #
+        #
+        #print("event_id = ", int(ev['event_id']))
         #
         for wf, npe, lst_id in zip( wf_list, n_pe_per_tel_list, LSTID_list) :
             try:                
+                #
                 L1_digitalsum = digital_sum(wf=wf, digi_sum_channel_list=L1_trigger_pixel_cluster_list)
                 L3_digitalsum = digital_sum(wf=wf, digi_sum_channel_list=L3_trigger_DBSCAN_pixel_cluster_list)
                 L3_digitalsum_all = digital_sum(wf=wf, digi_sum_channel_list=L3_trigger_DBSCAN_pixel_cluster_list_all)
-                L1_trigger_info = get_L1_trigger_info(digitalsum=L1_digitalsum, pixel_mapping=pixel_mapping, digi_sum_channel_list=L1_trigger_pixel_cluster_list)
                 #
-                DBSCAN_clusters_info = get_DBSCAN_clusters( digitalsum = L3_digitalsum,
+                L1_trigger_info = get_L1_trigger_info(digitalsum=L1_digitalsum, pixel_mapping=pixel_mapping, digi_sum_channel_list=L1_trigger_pixel_cluster_list)
+                #                
+                DBSCAN_clusters_info_isolated = get_DBSCAN_clusters( digitalsum = L3_digitalsum,
+                                                                     pixel_mapping = pixel_mapping,
+                                                                     pixel_mapping_extended = pixel_mapping_extended,
+                                                                     channel_list = L3_trigger_DBSCAN_pixel_cluster_list,
+                                                                     time_norm = _time_norm_isolated,
+                                                                     digitalsum_threshold = _DBSCAN_digitalsum_threshold_isolated,
+                                                                     DBSCAN_eps = _DBSCAN_eps_isolated,
+                                                                     DBSCAN_min_samples = _DBSCAN_min_samples_isolated)
+                #
+                DBSCAN_clusters_info = get_DBSCAN_clusters( digitalsum = L3_digitalsum_all,
                                                             pixel_mapping = pixel_mapping,
-                                                            pixel_mapping_extended = pixel_mapping_extended,
-                                                            channel_list=L3_trigger_DBSCAN_pixel_cluster_list,
+                                                            pixel_mapping_extended = pixel_mapping_extended_all,
+                                                            channel_list = L3_trigger_DBSCAN_pixel_cluster_list_all,
                                                             time_norm = _time_norm,
                                                             digitalsum_threshold = _DBSCAN_digitalsum_threshold,
                                                             DBSCAN_eps = _DBSCAN_eps,
                                                             DBSCAN_min_samples = _DBSCAN_min_samples)
-                print("npe = ",npe)
-                print_trigger_info(trigger_info=DBSCAN_clusters_info)
+                #
+                #
+                if (lst_id == 0) :
+                    L1_trigger_info_LST1 = L1_trigger_info
+                    DBSCAN_clusters_info_isolated_LST1 = DBSCAN_clusters_info_isolated
+                    DBSCAN_clusters_info_LST1 = DBSCAN_clusters_info
+                elif (lst_id == 1) :
+                    L1_trigger_info_LST2 = L1_trigger_info
+                    DBSCAN_clusters_info_isolated_LST2 = DBSCAN_clusters_info_isolated
+                    DBSCAN_clusters_info_LST2 = DBSCAN_clusters_info
+                elif (lst_id == 2) :
+                    L1_trigger_info_LST3 = L1_trigger_info
+                    DBSCAN_clusters_info_isolated_LST3 = DBSCAN_clusters_info_isolated
+                    DBSCAN_clusters_info_LST3 = DBSCAN_clusters_info                    
+                elif (lst_id == 3) :
+                    L1_trigger_info_LST4 = L1_trigger_info
+                    DBSCAN_clusters_info_isolated_LST4 = DBSCAN_clusters_info_isolated
+                    DBSCAN_clusters_info_LST4 = DBSCAN_clusters_info
+                #
+                #
             except:
-                L1_trigger_info=def_L1_trigger_info()
-                DBSCAN_clusters_info = def_clusters_info()
+                if (lst_id == 0) :
+                    L1_trigger_info_LST1 = def_L1_trigger_info()
+                    DBSCAN_clusters_info_isolated_LST1 = def_clusters_info()
+                    DBSCAN_clusters_info_LST1 = def_clusters_info()
+                elif (lst_id == 1) :
+                    L1_trigger_info_LST2 = def_L1_trigger_info()
+                    DBSCAN_clusters_info_isolated_LST2 = def_clusters_info()
+                    DBSCAN_clusters_info_LST2 = def_clusters_info()
+                elif (lst_id == 2) :
+                    L1_trigger_info_LST3 = def_L1_trigger_info()
+                    DBSCAN_clusters_info_isolated_LST3 = def_clusters_info()
+                    DBSCAN_clusters_info_LST3 = def_clusters_info()
+                elif (lst_id == 3) :
+                    L1_trigger_info_LST4 = def_L1_trigger_info()
+                    DBSCAN_clusters_info_isolated_LST4 = def_clusters_info()
+                    DBSCAN_clusters_info_LST4 = def_clusters_info()
             #
             #
-            L1_trigger_info_list.append(L1_trigger_info)
-            DBSCAN_clusters_info_list.append(DBSCAN_clusters_info)
+        #
+        #
+        event_info_list.append([ev['event_id'],
+                                ev['mc_shower']['energy'],
+                                ev['mc_shower']['azimuth'],
+                                ev['mc_shower']['altitude'],
+                                ev['mc_shower']['h_first_int'],
+                                ev['mc_shower']['xmax'],
+                                ev['mc_shower']['hmax'],
+                                ev['mc_shower']['emax'],
+                                ev['mc_shower']['cmax'],
+                                ev['mc_event']['xcore'],
+                                ev['mc_event']['ycore'],
+                                ev_time[0],
+                                ev_time[1],
+                                ev_time[2],
+                                ev_time[3],
+                                nphotons[0],
+                                nphotons[1],
+                                nphotons[2],
+                                nphotons[3],
+                                n_pe[0],
+                                n_pe[1],
+                                n_pe[2],
+                                n_pe[3],
+                                n_pixels[0],
+                                n_pixels[1],
+                                n_pixels[2],
+                                n_pixels[3],
+                                L1_trigger_info_LST1['max_digi_sum'],
+                                L1_trigger_info_LST1['x_mean'],
+                                L1_trigger_info_LST1['y_mean'],
+                                L1_trigger_info_LST1['t_mean'],
+                                L1_trigger_info_LST1['channelID'],
+                                L1_trigger_info_LST1['timeID'],
+                                L1_trigger_info_LST2['max_digi_sum'],
+                                L1_trigger_info_LST2['x_mean'],
+                                L1_trigger_info_LST2['y_mean'],
+                                L1_trigger_info_LST2['t_mean'],
+                                L1_trigger_info_LST2['channelID'],
+                                L1_trigger_info_LST2['timeID'],
+                                L1_trigger_info_LST3['max_digi_sum'],
+                                L1_trigger_info_LST3['x_mean'],
+                                L1_trigger_info_LST3['y_mean'],
+                                L1_trigger_info_LST3['t_mean'],
+                                L1_trigger_info_LST3['channelID'],
+                                L1_trigger_info_LST3['timeID'],
+                                L1_trigger_info_LST4['max_digi_sum'],
+                                L1_trigger_info_LST4['x_mean'],
+                                L1_trigger_info_LST4['y_mean'],
+                                L1_trigger_info_LST4['t_mean'],
+                                L1_trigger_info_LST4['channelID'],
+                                L1_trigger_info_LST4['timeID'],
+                                DBSCAN_clusters_info_isolated_LST1['n_digitalsum_points'],
+                                DBSCAN_clusters_info_isolated_LST1['n_clusters'],
+                                DBSCAN_clusters_info_isolated_LST1['n_points'],
+                                DBSCAN_clusters_info_isolated_LST1['x_mean'],
+                                DBSCAN_clusters_info_isolated_LST1['y_mean'],
+                                DBSCAN_clusters_info_isolated_LST1['t_mean'],
+                                DBSCAN_clusters_info_isolated_LST1['channelID'],
+                                DBSCAN_clusters_info_isolated_LST1['timeID'],
+                                DBSCAN_clusters_info_isolated_LST2['n_digitalsum_points'],
+                                DBSCAN_clusters_info_isolated_LST2['n_clusters'],
+                                DBSCAN_clusters_info_isolated_LST2['n_points'],
+                                DBSCAN_clusters_info_isolated_LST2['x_mean'],
+                                DBSCAN_clusters_info_isolated_LST2['y_mean'],
+                                DBSCAN_clusters_info_isolated_LST2['t_mean'],
+                                DBSCAN_clusters_info_isolated_LST2['channelID'],
+                                DBSCAN_clusters_info_isolated_LST2['timeID'],
+                                DBSCAN_clusters_info_isolated_LST3['n_digitalsum_points'],
+                                DBSCAN_clusters_info_isolated_LST3['n_clusters'],
+                                DBSCAN_clusters_info_isolated_LST3['n_points'],
+                                DBSCAN_clusters_info_isolated_LST3['x_mean'],
+                                DBSCAN_clusters_info_isolated_LST3['y_mean'],
+                                DBSCAN_clusters_info_isolated_LST3['t_mean'],
+                                DBSCAN_clusters_info_isolated_LST3['channelID'],
+                                DBSCAN_clusters_info_isolated_LST3['timeID'],
+                                DBSCAN_clusters_info_isolated_LST4['n_digitalsum_points'],
+                                DBSCAN_clusters_info_isolated_LST4['n_clusters'],
+                                DBSCAN_clusters_info_isolated_LST4['n_points'],
+                                DBSCAN_clusters_info_isolated_LST4['x_mean'],
+                                DBSCAN_clusters_info_isolated_LST4['y_mean'],
+                                DBSCAN_clusters_info_isolated_LST4['t_mean'],
+                                DBSCAN_clusters_info_isolated_LST4['channelID'],
+                                DBSCAN_clusters_info_LST4['timeID'],                      
+                                DBSCAN_clusters_info_LST1['n_digitalsum_points'],
+                                DBSCAN_clusters_info_LST1['n_clusters'],
+                                DBSCAN_clusters_info_LST1['n_points'],
+                                DBSCAN_clusters_info_LST1['x_mean'],
+                                DBSCAN_clusters_info_LST1['y_mean'],
+                                DBSCAN_clusters_info_LST1['t_mean'],
+                                DBSCAN_clusters_info_LST1['channelID'],
+                                DBSCAN_clusters_info_LST1['timeID'],
+                                DBSCAN_clusters_info_LST2['n_digitalsum_points'],
+                                DBSCAN_clusters_info_LST2['n_clusters'],
+                                DBSCAN_clusters_info_LST2['n_points'],
+                                DBSCAN_clusters_info_LST2['x_mean'],
+                                DBSCAN_clusters_info_LST2['y_mean'],
+                                DBSCAN_clusters_info_LST2['t_mean'],
+                                DBSCAN_clusters_info_LST2['channelID'],
+                                DBSCAN_clusters_info_LST2['timeID'],
+                                DBSCAN_clusters_info_LST3['n_digitalsum_points'],
+                                DBSCAN_clusters_info_LST3['n_clusters'],
+                                DBSCAN_clusters_info_LST3['n_points'],
+                                DBSCAN_clusters_info_LST3['x_mean'],
+                                DBSCAN_clusters_info_LST3['y_mean'],
+                                DBSCAN_clusters_info_LST3['t_mean'],
+                                DBSCAN_clusters_info_LST3['channelID'],
+                                DBSCAN_clusters_info_LST3['timeID'],
+                                DBSCAN_clusters_info_LST4['n_digitalsum_points'],
+                                DBSCAN_clusters_info_LST4['n_clusters'],
+                                DBSCAN_clusters_info_LST4['n_points'],
+                                DBSCAN_clusters_info_LST4['x_mean'],
+                                DBSCAN_clusters_info_LST4['y_mean'],
+                                DBSCAN_clusters_info_LST4['t_mean'],
+                                DBSCAN_clusters_info_LST4['channelID'],
+                                DBSCAN_clusters_info_LST4['timeID']])
+        #
         #
         ev_counter=ev_counter+1
         #
@@ -411,8 +632,129 @@ def evtloop(datafilein, nevmax, pixel_mapping, L1_trigger_pixel_cluster_list, L3
         
     sf.close()
     
-    return  event_info_list
-    
+    return event_info_list
+
+def save_data(event_info_list, outpkl, outcsv):
+    event_info_arr=np.array(event_info_list)
+    pkl.dump(event_info_arr, open(outpkl, "wb"), protocol=pkl.HIGHEST_PROTOCOL)    
+    df = pd.DataFrame({'event_id': event_info_arr[:,0],
+                       'energy': event_info_arr[:,1],
+                       'azimuth': event_info_arr[:,2],
+                       'altitude': event_info_arr[:,3],
+                       'h_first_int': event_info_arr[:,4],
+                       'xmax': event_info_arr[:,5],
+                       'hmax': event_info_arr[:,6],
+                       'emax': event_info_arr[:,7],
+                       'cmax': event_info_arr[:,8],
+                       'xcore': event_info_arr[:,9],
+                       'ycore': event_info_arr[:,10],
+                       'ev_time_LST1': event_info_arr[:,11],
+                       'ev_time_LST2': event_info_arr[:,12],
+                       'ev_time_LST3': event_info_arr[:,13],
+                       'ev_time_LST4': event_info_arr[:,14],
+                       'nphotons_LST1': event_info_arr[:,15],
+                       'nphotons_LST2': event_info_arr[:,16],
+                       'nphotons_LST3': event_info_arr[:,17],
+                       'nphotons_LST4': event_info_arr[:,18],
+                       'n_pe_LST1': event_info_arr[:,19],
+                       'n_pe_LST2': event_info_arr[:,20],
+                       'n_pe_LST3': event_info_arr[:,21],
+                       'n_pe_LST4': event_info_arr[:,22],
+                       'n_pixels_LST1': event_info_arr[:,23],
+                       'n_pixels_LST2': event_info_arr[:,24],
+                       'n_pixels_LST3': event_info_arr[:,25],
+                       'n_pixels_LST4': event_info_arr[:,26],                       
+                       'L1_max_digi_sum_LST1': event_info_arr[:,27],
+                       'L1_x_mean_LST1': event_info_arr[:,28],
+                       'L1_y_mean_LST1': event_info_arr[:,29],
+                       'L1_t_mean_LST1': event_info_arr[:,30],
+                       'L1_channelID_LST1': event_info_arr[:,31],
+                       'L1_timeID_LST1': event_info_arr[:,32],
+                       'L1_max_digi_sum_LST2': event_info_arr[:,33],
+                       'L1_x_mean_LST2': event_info_arr[:,34],
+                       'L1_y_mean_LST2': event_info_arr[:,35],
+                       'L1_t_mean_LST2': event_info_arr[:,36],
+                       'L1_channelID_LST2': event_info_arr[:,37],
+                       'L1_timeID_LST2': event_info_arr[:,38],
+                       'L1_max_digi_sum_LST3': event_info_arr[:,39],
+                       'L1_x_mean_LST3': event_info_arr[:,40],
+                       'L1_y_mean_LST3': event_info_arr[:,41],
+                       'L1_t_mean_LST3': event_info_arr[:,42],
+                       'L1_channelID_LST3': event_info_arr[:,43],
+                       'L1_timeID_LST3': event_info_arr[:,44],
+                       'L1_max_digi_sum_LST4': event_info_arr[:,45],
+                       'L1_x_mean_LST4': event_info_arr[:,46],
+                       'L1_y_mean_LST4': event_info_arr[:,47],
+                       'L1_t_mean_LST4': event_info_arr[:,48],
+                       'L1_channelID_LST4': event_info_arr[:,49],
+                       'L1_timeID_LST4': event_info_arr[:,50],                       
+                       'L3_iso_n_digitalsum_points_LST1': event_info_arr[:,51],
+                       'L3_iso_n_clusters_LST1': event_info_arr[:,52],
+                       'L3_iso_n_points_LST1': event_info_arr[:,53],
+                       'L3_iso_x_mean_LST1': event_info_arr[:,54],
+                       'L3_iso_y_mean_LST1': event_info_arr[:,55],
+                       'L3_iso_t_mean_LST1': event_info_arr[:,56],
+                       'L3_iso_channelID_LST1': event_info_arr[:,57],
+                       'L3_iso_timeID_LST1': event_info_arr[:,58],
+                       'L3_iso_n_digitalsum_points_LST2': event_info_arr[:,59],
+                       'L3_iso_n_clusters_LST2': event_info_arr[:,60],
+                       'L3_iso_n_points_LST2': event_info_arr[:,61],
+                       'L3_iso_x_mean_LST2': event_info_arr[:,62],
+                       'L3_iso_y_mean_LST2': event_info_arr[:,63],
+                       'L3_iso_t_mean_LST2': event_info_arr[:,64],
+                       'L3_iso_channelID_LST2': event_info_arr[:,65],
+                       'L3_iso_timeID_LST2': event_info_arr[:,66],
+                       'L3_iso_n_digitalsum_points_LST3': event_info_arr[:,67],
+                       'L3_iso_n_clusters_LST3': event_info_arr[:,68],
+                       'L3_iso_n_points_LST3': event_info_arr[:,69],
+                       'L3_iso_x_mean_LST3': event_info_arr[:,70],
+                       'L3_iso_y_mean_LST3': event_info_arr[:,71],
+                       'L3_iso_t_mean_LST3': event_info_arr[:,72],
+                       'L3_iso_channelID_LST3': event_info_arr[:,73],
+                       'L3_iso_timeID_LST3': event_info_arr[:,74],
+                       'L3_iso_n_digitalsum_points_LST4': event_info_arr[:,75],
+                       'L3_iso_n_clusters_LST4': event_info_arr[:,76],
+                       'L3_iso_n_points_LST4': event_info_arr[:,77],
+                       'L3_iso_x_mean_LST4': event_info_arr[:,78],
+                       'L3_iso_y_mean_LST4': event_info_arr[:,79],
+                       'L3_iso_t_mean_LST4': event_info_arr[:,80],
+                       'L3_iso_channelID_LST4': event_info_arr[:,81],
+                       'L3_iso_timeID_LST4': event_info_arr[:,82],                      
+                       'L3_cl_n_digitalsum_points_LST1': event_info_arr[:,83],
+                       'L3_cl_n_clusters_LST1': event_info_arr[:,84],
+                       'L3_cl_n_points_LST1': event_info_arr[:,85],
+                       'L3_cl_x_mean_LST1': event_info_arr[:,86],
+                       'L3_cl_y_mean_LST1': event_info_arr[:,87],
+                       'L3_cl_t_mean_LST1': event_info_arr[:,88],
+                       'L3_cl_channelID_LST1': event_info_arr[:,89],
+                       'L3_cl_timeID_LST1': event_info_arr[:,90],                       
+                       'L3_cl_n_digitalsum_points_LST2': event_info_arr[:,91],
+                       'L3_cl_n_clusters_LST2': event_info_arr[:,92],
+                       'L3_cl_n_points_LST2': event_info_arr[:,93],
+                       'L3_cl_x_mean_LST2': event_info_arr[:,94],
+                       'L3_cl_y_mean_LST2': event_info_arr[:,95],
+                       'L3_cl_t_mean_LST2': event_info_arr[:,96],
+                       'L3_cl_channelID_LST2': event_info_arr[:,97],
+                       'L3_cl_timeID_LST2': event_info_arr[:,98],
+                       'L3_cl_n_digitalsum_points_LST3': event_info_arr[:,99],
+                       'L3_cl_n_clusters_LST3': event_info_arr[:,100],
+                       'L3_cl_n_points_LST3': event_info_arr[:,101],
+                       'L3_cl_x_mean_LST3': event_info_arr[:,102],
+                       'L3_cl_y_mean_LST3': event_info_arr[:,103],
+                       'L3_cl_t_mean_LST3': event_info_arr[:,104],
+                       'L3_cl_channelID_LST3': event_info_arr[:,105],
+                       'L3_cl_timeID_LST3': event_info_arr[:,106],
+                       'L3_cl_n_digitalsum_points_LST4': event_info_arr[:,107],
+                       'L3_cl_n_clusters_LST4': event_info_arr[:,108],
+                       'L3_cl_n_points_LST4': event_info_arr[:,109],
+                       'L3_cl_x_mean_LST4': event_info_arr[:,110],
+                       'L3_cl_y_mean_LST4': event_info_arr[:,111],
+                       'L3_cl_t_mean_LST4': event_info_arr[:,112],
+                       'L3_cl_channelID_LST4': event_info_arr[:,113],
+                       'L3_cl_timeID_LST4': event_info_arr[:,114]})
+    df.to_csv(outcsv)
+
+
 def main():
     pass
     
@@ -420,8 +762,8 @@ if __name__ == "__main__":
     if (len(sys.argv)==9 and (str(sys.argv[1]) == "--noise")):
         #
         simtelIn = str(sys.argv[2])
-        headeroutpkl = str(sys.argv[3])
-        headeroutcsv = str(sys.argv[4])
+        outpkl = str(sys.argv[3])
+        outcsv = str(sys.argv[4])
         pixel_mapping_csv = str(sys.argv[5])
         isolated_flower_seed_super_flower_csv = str(sys.argv[6])
         isolated_flower_seed_flower_csv = str(sys.argv[7])
@@ -429,8 +771,8 @@ if __name__ == "__main__":
         #
         print("sys.argv[1]                           = ", sys.argv[1])
         print("simtelIn                              = ", simtelIn)
-        print("headeroutpkl                          = ", headeroutpkl)
-        print("headeroutcsv                          = ", headeroutcsv)
+        print("outpkl                                = ", outpkl)
+        print("outcsv                                = ", outcsv)
         print("pixel_mapping_csv                     = ", pixel_mapping_csv)
         print("isolated_flower_seed_super_flower_csv = ", isolated_flower_seed_super_flower_csv)
         print("isolated_flower_seed_flower_csv       = ", isolated_flower_seed_flower_csv)
@@ -443,7 +785,7 @@ if __name__ == "__main__":
         isolated_flower_seed_super_flower = np.genfromtxt(isolated_flower_seed_super_flower_csv,dtype=int)
         all_seed_flower = np.genfromtxt(all_seed_flower_csv,dtype=int)
         #
-        evtloop_noise( datafilein=simtelIn, nevmax=-1,
+        evtloop_noise( datafilein=simtelIn, nevmax=100,
                        pixel_mapping=pixel_mapping,
                        L1_trigger_pixel_cluster_list=isolated_flower_seed_super_flower,
                        L3_trigger_DBSCAN_pixel_cluster_list=isolated_flower_seed_flower,
@@ -452,8 +794,8 @@ if __name__ == "__main__":
     elif (len(sys.argv)==9 and (str(sys.argv[1]) == "--trg")):
         #
         simtelIn = str(sys.argv[2])
-        headeroutpkl = str(sys.argv[3])
-        headeroutcsv = str(sys.argv[4])
+        outpkl = str(sys.argv[3])
+        outcsv = str(sys.argv[4])
         pixel_mapping_csv = str(sys.argv[5])
         isolated_flower_seed_super_flower_csv = str(sys.argv[6])
         isolated_flower_seed_flower_csv = str(sys.argv[7])
@@ -461,8 +803,8 @@ if __name__ == "__main__":
         #
         print("sys.argv[1]                           = ", sys.argv[1])
         print("simtelIn                              = ", simtelIn)
-        print("headeroutpkl                          = ", headeroutpkl)
-        print("headeroutcsv                          = ", headeroutcsv)
+        print("outpkl                                = ", outpkl)
+        print("outcsv                                = ", outcsv)
         print("pixel_mapping_csv                     = ", pixel_mapping_csv)
         print("isolated_flower_seed_super_flower_csv = ", isolated_flower_seed_super_flower_csv)
         print("isolated_flower_seed_flower_csv       = ", isolated_flower_seed_flower_csv)
@@ -475,11 +817,12 @@ if __name__ == "__main__":
         isolated_flower_seed_super_flower = np.genfromtxt(isolated_flower_seed_super_flower_csv,dtype=int)
         all_seed_flower = np.genfromtxt(all_seed_flower_csv,dtype=int)
         #
-        evtloop( datafilein=simtelIn, nevmax=100,
-                 pixel_mapping=pixel_mapping,
-                 L1_trigger_pixel_cluster_list=isolated_flower_seed_super_flower,
-                 L3_trigger_DBSCAN_pixel_cluster_list=isolated_flower_seed_flower,
-                 L3_trigger_DBSCAN_pixel_cluster_list_all=all_seed_flower)
+        event_info_list = evtloop( datafilein=simtelIn, nevmax=-1,
+                                   pixel_mapping=pixel_mapping,
+                                   L1_trigger_pixel_cluster_list=isolated_flower_seed_super_flower,
+                                   L3_trigger_DBSCAN_pixel_cluster_list=isolated_flower_seed_flower,
+                                   L3_trigger_DBSCAN_pixel_cluster_list_all=all_seed_flower)
+        save_data(event_info_list, outpkl, outcsv)
         #
     else:
         print(" --> HELP info")
@@ -488,8 +831,8 @@ if __name__ == "__main__":
         print(" ---> for noise")
         print(" [1] --noise")
         print(" [2] simtelIn")
-        print(" [3] headeroutpkl")
-        print(" [4] headeroutcsv")
+        print(" [3] outpkl")
+        print(" [4] outcsv")
         print(" [5] pixel_mapping_csv")
         print(" [6] isolated_flower_seed_super_flower_csv")
         print(" [7] isolated_flower_seed_flower_csv")
@@ -497,8 +840,8 @@ if __name__ == "__main__":
         print(" ---> for events")
         print(" [1] --trg")
         print(" [2] simtelIn")
-        print(" [3] headeroutpkl")
-        print(" [4] headeroutcsv")
+        print(" [3] outpkl")
+        print(" [4] outcsv")
         print(" [5] pixel_mapping_csv")
         print(" [6] isolated_flower_seed_super_flower_csv")
         print(" [7] isolated_flower_seed_flower_csv")

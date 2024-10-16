@@ -12,19 +12,23 @@ then
     printHelp
 else
     if [ "$1" = "-d" ]; then
-	dataOIdirPreff="../scratch/simtel_data/proton_st_NSB268MHz/"
-	dataOI_npe_dirPreff="../scratch/simtel_data/proton_st_NSB268MHz/npe/"
+	#
+	#dataOIdirPreff="../scratch/simtel_data/proton_st_NSB268MHz/"
+	#dataOI_npe_dirPreff="../scratch/simtel_data/proton_st_NSB268MHz/npe/"
+	#No NSB
+	dataOIdirPreff="../scratch/simtel_data/proton_st/"
+	dataOI_npe_dirPreff="../scratch/simtel_data/proton_st/npe/"
 	#
 	mkdir -p $dataOI_npe_dirPreff
 	simtelIn=$dataOIdirPreff"/data/corsika_run1.simtel.gz"
-	headeroutpkl=$dataOI_npe_dirPreff"/corsika_run1.npe.pkl"
-	headeroutcsv=$dataOI_npe_dirPreff"/corsika_run1.npe.csv"
+	outpkl=$dataOI_npe_dirPreff"/corsika_run1.npe.pkl"
+	outcsv=$dataOI_npe_dirPreff"/corsika_run1.npe.csv"
 	#
 	pixel_mapping_csv="pixel_mapping.csv"
         isolated_flower_seed_super_flower_csv="isolated_flower_seed_super_flower.list"
         isolated_flower_seed_flower_csv="isolated_flower_seed_flower.list"
 	all_seed_flower_csv="all_seed_flower.list"
-	python DBscan_on_simtel_data_stereo.py --trg $simtelIn $headeroutpkl $headeroutcsv $pixel_mapping_csv $isolated_flower_seed_super_flower_csv $isolated_flower_seed_flower_csv $all_seed_flower_csv
+	python DBscan_on_simtel_data_stereo.py --trg $simtelIn $outpkl $outcsv $pixel_mapping_csv $isolated_flower_seed_super_flower_csv $isolated_flower_seed_flower_csv $all_seed_flower_csv
     elif [ "$1" = "-n" ]; then
 	#
 	dataOIdirPreff="../scratch/simtel_data/proton_st_NSB268MHz/"
@@ -32,14 +36,14 @@ else
 	#
 	mkdir -p $dataOI_npe_dirPreff
 	simtelIn=$dataOIdirPreff"/data/corsika_run1.simtel.gz"
-	headeroutpkl=$dataOI_npe_dirPreff"/corsika_run1.npe.pkl"
-	headeroutcsv=$dataOI_npe_dirPreff"/corsika_run1.npe.csv"
+	outpkl=$dataOI_npe_dirPreff"/corsika_run1.npe.pkl"
+	outcsv=$dataOI_npe_dirPreff"/corsika_run1.npe.csv"
 	#
 	pixel_mapping_csv="pixel_mapping.csv"
         isolated_flower_seed_super_flower_csv="isolated_flower_seed_super_flower.list"
         isolated_flower_seed_flower_csv="isolated_flower_seed_flower.list"
 	all_seed_flower_csv="all_seed_flower.list"
-	python DBscan_on_simtel_data_stereo.py --noise $simtelIn $headeroutpkl $headeroutcsv $pixel_mapping_csv $isolated_flower_seed_super_flower_csv $isolated_flower_seed_flower_csv $all_seed_flower_csv
+	python DBscan_on_simtel_data_stereo.py --noise $simtelIn $outpkl $outcsv $pixel_mapping_csv $isolated_flower_seed_super_flower_csv $isolated_flower_seed_flower_csv $all_seed_flower_csv
     elif [ "$1" = "-h" ]; then
         printHelp
     else
