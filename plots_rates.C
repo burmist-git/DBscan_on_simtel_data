@@ -109,7 +109,7 @@ Int_t plots_rates(){
   //h1_wf_noise->Draw("sames");
   h1_wf_noise->SetTitle("");
   h1_wf_noise->Draw();
-  h1_isolated_flower->Draw("sames");
+  //h1_isolated_flower->Draw("sames");
   //
   //h1_wf_noise_bl->GetXaxis()->SetTitle("ADC counts");
   h1_wf_noise->GetXaxis()->SetTitle("ADC counts");
@@ -211,7 +211,7 @@ void read_file(TString name, TH1D *h1, TGraphErrors *gr){
   h1->SetBins( nbins, binmin, binmax);
   for(Int_t i = 0; i<gr_tmp->GetN(); i++){
     gr_tmp->GetPoint(i, binx, biny);
-    h1->SetBinContent(i+1,biny/(6.11/1.791));
+    h1->SetBinContent(i+1,biny);
   }
 }
 
