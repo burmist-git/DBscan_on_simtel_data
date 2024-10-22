@@ -4,6 +4,7 @@ function printHelp {
     echo " --> ERROR in input arguments "
     echo " [0] -d             : trigger"
     echo " [0] -n             : noise"
+    echo " [0] -m             : getmap"
     echo " [0] -h             : print help"
 }
 
@@ -13,11 +14,11 @@ then
 else
     if [ "$1" = "-d" ]; then
 	#
-	#dataOIdirPreff="../scratch/simtel_data/proton_st_NSB268MHz/"
-	#dataOI_npe_dirPreff="../scratch/simtel_data/proton_st_NSB268MHz/npe/"
-	#No NSB
-	dataOIdirPreff="../scratch/simtel_data/proton_st/"
-	dataOI_npe_dirPreff="../scratch/simtel_data/proton_st/npe/"
+	dataOIdirPreff="../scratch/simtel_data/gamma_st/"
+	dataOI_npe_dirPreff="../scratch/simtel_data/gamma_st/npe/"
+	#
+	#dataOIdirPreff="../scratch/simtel_data/proton_st/"
+	#dataOI_npe_dirPreff="../scratch/simtel_data/proton_st/npe/"
 	#
 	mkdir -p $dataOI_npe_dirPreff
 	simtelIn=$dataOIdirPreff"/data/corsika_run1.simtel.gz"
@@ -31,8 +32,10 @@ else
 	python DBscan_on_simtel_data_stereo.py --trg $simtelIn $outpkl $outcsv $pixel_mapping_csv $isolated_flower_seed_super_flower_csv $isolated_flower_seed_flower_csv $all_seed_flower_csv
     elif [ "$1" = "-n" ]; then
 	#
-	dataOIdirPreff="../scratch/simtel_data/proton_st_NSB268MHz/"
-	dataOI_npe_dirPreff="../scratch/simtel_data/proton_st_NSB268MHz/npe/"
+	#dataOIdirPreff="../scratch/simtel_data/proton_st/"
+	#dataOI_npe_dirPreff="../scratch/simtel_data/proton_st/npe/"
+	dataOIdirPreff="../scratch/simtel_data/gamma_st/"
+	dataOI_npe_dirPreff="../scratch/simtel_data/gamma_st/npe/"
 	#
 	mkdir -p $dataOI_npe_dirPreff
 	simtelIn=$dataOIdirPreff"/data/corsika_run1.simtel.gz"
@@ -44,6 +47,9 @@ else
         isolated_flower_seed_flower_csv="isolated_flower_seed_flower.list"
 	all_seed_flower_csv="all_seed_flower.list"
 	python DBscan_on_simtel_data_stereo.py --noise $simtelIn $outpkl $outcsv $pixel_mapping_csv $isolated_flower_seed_super_flower_csv $isolated_flower_seed_flower_csv $all_seed_flower_csv
+    elif [ "$1" = "-m" ]; then
+	simtelIn="../scratch/simtel_data/old/proton_st_NSB268MHz/data/corsika_run1.simtel.gz"
+	python DBscan_on_simtel_data_stereo.py --getmap $simtelIn
     elif [ "$1" = "-h" ]; then
         printHelp
     else

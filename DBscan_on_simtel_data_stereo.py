@@ -14,11 +14,13 @@ import sys
 import time
 from sklearn.cluster import DBSCAN
 import matplotlib.pyplot as plt
+#
+from astropy.table import Table
 
 ###################################
 #
 #
-_n_max_noise_events=1000
+_n_max_noise_events=3000
 _npe_noise=20
 _n_of_time_sample=75
 _time_of_one_sample_s=(_n_of_time_sample*1000/1024.0*1.0e-9)
@@ -63,15 +65,15 @@ def extend_pixel_mapping( pixel_mapping, channel_list, number_of_wf_time_samples
     pixt=np.concatenate(([pixt for i in np.arange(0,channel_list.shape[0])]), axis=0)
     pixt=np.expand_dims(pixt,axis=2)
     pixel_mapping_extended=np.concatenate((pixel_mapping_extended,pixt), axis=2)
+    #print("extend_pixel_mapping")
+    #print(pixel_mapping.shape)
+    #print(channel_list.shape)
     #print(pixel_mapping_extended)
     #print(pixel_mapping_extended.shape)
+    #print(pixel_mapping_extended[0,1,2])
     return pixel_mapping_extended
 
 def get_DBSCAN_clusters( digitalsum, pixel_mapping, pixel_mapping_extended, channel_list, time_norm, digitalsum_threshold, DBSCAN_eps, DBSCAN_min_samples):
-    #extend_pixel_mapping( pixel_mapping=pixel_mapping, channel_list=channel_list, number_of_wf_time_samples=digitalsum.shape[1])
-    #print(digitalsum.shape)
-    #print(pixel_mapping.shape)
-    #print(print(pixel_mapping_extended.shape)
     #
     clusters_info=def_clusters_info()
     X=pixel_mapping_extended[digitalsum>digitalsum_threshold] 
@@ -89,13 +91,30 @@ def get_DBSCAN_clusters( digitalsum, pixel_mapping, pixel_mapping_extended, chan
         clusters_info['n_clusters'] = len(clustersID)
         clusters_info['n_points'] = len(clusters[clusters==clustersIDmax])
         #
-        clusters_info['x_mean'] = np.mean(X[clusters==clustersIDmax][0])
-        clusters_info['y_mean'] = np.mean(X[clusters==clustersIDmax][1])
-        clusters_info['t_mean'] = np.mean(X[clusters==clustersIDmax][2])
-    #    
+        clusters_info['x_mean'] = np.mean(X[clusters==clustersIDmax][:,0])
+        clusters_info['y_mean'] = np.mean(X[clusters==clustersIDmax][:,1])
+        clusters_info['t_mean'] = np.mean(X[clusters==clustersIDmax][:,2])
+        #
+        clusters_info['channelID'] = get_channelID_from_x_y( pixel_mapping=pixel_mapping, x_val=clusters_info['x_mean'], y_val=clusters_info['y_mean'])
+        clusters_info['timeID'] = get_timeID( number_of_time_points=digitalsum.shape[1], time_norm=time_norm, t_val=clusters_info['t_mean'])
     #
     return clusters_info
-    
+
+def get_channelID_from_x_y( pixel_mapping, x_val, y_val):
+    delta_dist_sq=0.000225
+    dist=(pixel_mapping[:,0] - x_val)**2.0 + (pixel_mapping[:,1] - y_val)**2.0
+    if np.min(dist)<delta_dist_sq:
+        return int(np.argmin(dist))
+    #
+    return -999
+
+def get_timeID( number_of_time_points, time_norm, t_val):
+    if number_of_time_points > 1:        
+        pix_t=np.array([i for i in np.arange(0,number_of_time_points)])
+        pix_t=np.abs(pix_t*time_norm-t_val)
+        return np.argmin(pix_t)
+    return -999
+
 def digital_w_sum( wf, digi_sum_channel_list, channels_blacklist):
     #
     digital_sum_result=None
@@ -217,7 +236,8 @@ def save_and_analyze_rates_noise( hist_data, pdf_file_out, n_samples):
     #
     return    
     
-def analyze_noise( wf_noise, L1_digitalsum_noise, L3_digitalsum_noise, L3_digitalsum_noise_all):
+def analyze_noise( wf_noise, L1_digitalsum_noise, L3_digitalsum_noise, L3_digitalsum_noise_all,
+                   L1_trigger_info_noise, DBSCAN_clusters_info_isolated_noise, DBSCAN_clusters_info_noise):
     #
     print("analyze_noise")
     #
@@ -230,6 +250,10 @@ def analyze_noise( wf_noise, L1_digitalsum_noise, L3_digitalsum_noise, L3_digita
     print(L1_digitalsum_noise[0].shape)
     print(L3_digitalsum_noise[0].shape)
     print(L3_digitalsum_noise_all[0].shape)
+    #
+    print("len(L1_trigger_info_noise)               ", len(L1_trigger_info_noise))
+    print("len(DBSCAN_clusters_info_isolated_noise) ", len(DBSCAN_clusters_info_isolated_noise))
+    print("len(DBSCAN_clusters_info_noise)          ", len(DBSCAN_clusters_info_noise))    
     #
     print(_time_of_one_sample_s)
     #
@@ -252,7 +276,7 @@ def analyze_noise( wf_noise, L1_digitalsum_noise, L3_digitalsum_noise, L3_digita
     L1_digitalsum_noise_arr = result
     #
     result = None
-    for array in L1_digitalsum_noise:
+    for array in L3_digitalsum_noise:
         if result is None:
             result = array
         else:
@@ -269,15 +293,30 @@ def analyze_noise( wf_noise, L1_digitalsum_noise, L3_digitalsum_noise, L3_digita
     #
     L3_digitalsum_noise_all_arr = result
     #
-    print(np.mean(wf_noise_arr)," ",np.std(wf_noise_arr))
-    print(np.mean(L1_digitalsum_noise_arr)," ",np.std(L1_digitalsum_noise_arr))
-    print(np.mean(L3_digitalsum_noise_arr)," ",np.std(L3_digitalsum_noise_arr))
-    print(np.mean(L3_digitalsum_noise_all_arr)," ",np.std(L3_digitalsum_noise_all_arr))
+    #result = None
+    #for array in L1_trigger_info_noise:
+    #    if result is None:
+    #        result = np.array([float(array['max_digi_sum'])])
+    #    else:
+    #        result = np.concatenate((result, array))
+    #
+    L1_trigger_info_noise_arr = np.array([val['max_digi_sum'] for val in L1_trigger_info_noise])
+    DBSCAN_clusters_info_isolated_noise_arr = np.array([val['n_points'] for val in DBSCAN_clusters_info_isolated_noise])
+    DBSCAN_clusters_info_noise_arr = np.array([val['n_points'] for val in DBSCAN_clusters_info_noise])
+    #
+    print("wf_noise_arr                ", np.mean(wf_noise_arr)," +/- ",np.std(wf_noise_arr))
+    print("L1_digitalsum_noise_arr     ", np.mean(L1_digitalsum_noise_arr)," +/- ",np.std(L1_digitalsum_noise_arr))
+    print("L3_digitalsum_noise_arr     ", np.mean(L3_digitalsum_noise_arr)," +/- ",np.std(L3_digitalsum_noise_arr))
+    print("L3_digitalsum_noise_all_arr ", np.mean(L3_digitalsum_noise_all_arr)," +/- ",np.std(L3_digitalsum_noise_all_arr))
     #
     save_analyze_noise( data=wf_noise_arr.flatten(), pdf_file_out="wf_noiseNSB268MHz_arr.pdf", n_samples=len(wf_noise))
     save_analyze_noise( data=L1_digitalsum_noise_arr.flatten(), pdf_file_out="L1_digitalsum_noiseNSB268MHz_arr.pdf", n_samples=len(L1_digitalsum_noise))
     save_analyze_noise( data=L3_digitalsum_noise_arr.flatten(), pdf_file_out="L3_digitalsum_noiseNSB268MHz_arr.pdf", n_samples=len(L3_digitalsum_noise))
     save_analyze_noise( data=L3_digitalsum_noise_all_arr.flatten(), pdf_file_out="L3_digitalsum_noiseNSB268MHz_arr_all.pdf", n_samples=len(L3_digitalsum_noise_all))
+    #
+    save_analyze_noise( data=L1_trigger_info_noise_arr.flatten(), pdf_file_out="L1_max_digi_sum_noiseNSB268MHz.pdf", n_samples=len(L1_trigger_info_noise))
+    save_analyze_noise( data=DBSCAN_clusters_info_isolated_noise_arr.flatten(), pdf_file_out="L3_n_points_noiseNSB268MHz.pdf", n_samples=len(DBSCAN_clusters_info_isolated_noise))
+    save_analyze_noise( data=DBSCAN_clusters_info_noise_arr.flatten(), pdf_file_out="cleaning_n_points_noiseNSB268MHz.pdf", n_samples=len(DBSCAN_clusters_info_noise))
     #
     return
     
@@ -293,6 +332,9 @@ def evtloop_noise(datafilein, nevmax, pixel_mapping, L1_trigger_pixel_cluster_li
     toc = time.time()
     it_cout = 0
     #
+    pixel_mapping_extended=extend_pixel_mapping( pixel_mapping=pixel_mapping, channel_list=L3_trigger_DBSCAN_pixel_cluster_list, number_of_wf_time_samples=_n_of_time_sample)
+    pixel_mapping_extended_all=extend_pixel_mapping( pixel_mapping=pixel_mapping, channel_list=L3_trigger_DBSCAN_pixel_cluster_list_all, number_of_wf_time_samples=_n_of_time_sample)
+    #
     wf_trigger_pixel_list=np.array([i for i in np.arange(0,pixel_mapping.shape[0])])
     wf_trigger_pixel_list=np.reshape(wf_trigger_pixel_list,(pixel_mapping.shape[0],1))
     #
@@ -300,6 +342,10 @@ def evtloop_noise(datafilein, nevmax, pixel_mapping, L1_trigger_pixel_cluster_li
     L1_digitalsum_noise_list=[]
     L3_digitalsum_noise_list=[]
     L3_digitalsum_noise_list_all=[]
+    #
+    L1_trigger_info_list=[]
+    DBSCAN_clusters_info_isolated_list=[]
+    DBSCAN_clusters_info_list=[]
     #
     for ev in sf:
         #
@@ -317,10 +363,41 @@ def evtloop_noise(datafilein, nevmax, pixel_mapping, L1_trigger_pixel_cluster_li
             try:
                 if npe == _npe_noise:
                     if(len(wf_noise_list)<_n_max_noise_events):
+                        #print("npe = ", npe)
+                        #
+                        L1_digitalsum = digital_sum(wf=wf, digi_sum_channel_list=L1_trigger_pixel_cluster_list)
+                        L3_digitalsum = digital_sum(wf=wf, digi_sum_channel_list=L3_trigger_DBSCAN_pixel_cluster_list)
+                        L3_digitalsum_all = digital_sum(wf=wf, digi_sum_channel_list=L3_trigger_DBSCAN_pixel_cluster_list_all)
+                        #
                         wf_noise_list.append(wf)
-                        L1_digitalsum_noise_list.append(digital_sum(wf=wf, digi_sum_channel_list=L1_trigger_pixel_cluster_list))
-                        L3_digitalsum_noise_list.append(digital_sum(wf=wf, digi_sum_channel_list=L3_trigger_DBSCAN_pixel_cluster_list))
-                        L3_digitalsum_noise_list_all.append(digital_sum(wf=wf, digi_sum_channel_list=L3_trigger_DBSCAN_pixel_cluster_list_all))
+                        L1_digitalsum_noise_list.append(L1_digitalsum)
+                        L3_digitalsum_noise_list.append(L3_digitalsum)
+                        L3_digitalsum_noise_list_all.append(L3_digitalsum_all)
+                        #
+                        L1_trigger_info = get_L1_trigger_info(digitalsum=L1_digitalsum, pixel_mapping=pixel_mapping, digi_sum_channel_list=L1_trigger_pixel_cluster_list)
+                        #
+                        DBSCAN_clusters_info_isolated = get_DBSCAN_clusters( digitalsum = L3_digitalsum,
+                                                                             pixel_mapping = pixel_mapping,
+                                                                             pixel_mapping_extended = pixel_mapping_extended,
+                                                                             channel_list = L3_trigger_DBSCAN_pixel_cluster_list,
+                                                                             time_norm = _time_norm_isolated,
+                                                                             digitalsum_threshold = _DBSCAN_digitalsum_threshold_isolated,
+                                                                             DBSCAN_eps = _DBSCAN_eps_isolated,
+                                                                             DBSCAN_min_samples = _DBSCAN_min_samples_isolated)
+                        #
+                        DBSCAN_clusters_info = get_DBSCAN_clusters( digitalsum = L3_digitalsum_all,
+                                                                    pixel_mapping = pixel_mapping,
+                                                                    pixel_mapping_extended = pixel_mapping_extended_all,
+                                                                    channel_list = L3_trigger_DBSCAN_pixel_cluster_list_all,
+                                                                    time_norm = _time_norm,
+                                                                    digitalsum_threshold = _DBSCAN_digitalsum_threshold,
+                                                                    DBSCAN_eps = _DBSCAN_eps,
+                                                                    DBSCAN_min_samples = _DBSCAN_min_samples)
+                        #
+                        L1_trigger_info_list.append(L1_trigger_info)
+                        DBSCAN_clusters_info_isolated_list.append(DBSCAN_clusters_info_isolated)
+                        DBSCAN_clusters_info_list.append(DBSCAN_clusters_info)
+                        #
             except:
                 pass
         #
@@ -342,7 +419,10 @@ def evtloop_noise(datafilein, nevmax, pixel_mapping, L1_trigger_pixel_cluster_li
     analyze_noise( wf_noise=wf_noise_list,
                    L1_digitalsum_noise=L1_digitalsum_noise_list,
                    L3_digitalsum_noise=L3_digitalsum_noise_list,
-                   L3_digitalsum_noise_all=L3_digitalsum_noise_list_all)
+                   L3_digitalsum_noise_all=L3_digitalsum_noise_list_all,
+                   L1_trigger_info_noise=L1_trigger_info_list,
+                   DBSCAN_clusters_info_isolated_noise=DBSCAN_clusters_info_isolated_list,
+                   DBSCAN_clusters_info_noise=DBSCAN_clusters_info_list)
     #        
     return
 
@@ -754,7 +834,29 @@ def save_data(event_info_list, outpkl, outcsv):
                        'L3_cl_timeID_LST4': event_info_arr[:,114]})
     df.to_csv(outcsv)
 
+def get_pixel_mapping(datafilein = "../simtel_data/proton/data/corsika_run1.simtel.gz", outmap_csv = 'pixel_mapping_from_simtel.csv'):
+    sf = SimTelFile(datafilein)
+    #
+    n_pixels=float(sf.telescope_descriptions[1]['camera_organization']['n_pixels'])
+    n_drawers=float(sf.telescope_descriptions[1]['camera_organization']['n_drawers'])
+    pixel_size=float(sf.telescope_descriptions[1]['camera_settings']['pixel_size'][0])
+    #
+    the_map=np.concatenate((sf.telescope_descriptions[1]['camera_settings']['pixel_x'].reshape(int(n_pixels),1),
+                            sf.telescope_descriptions[1]['camera_settings']['pixel_y'].reshape(int(n_pixels),1),
+                            sf.telescope_descriptions[1]['camera_organization']['drawer'].reshape(int(n_pixels),1)), axis=1)
+    np.savetxt(outmap_csv, the_map, delimiter=' ',fmt='%f')
+    #
+    print('n_pixels   = ', int(n_pixels))
+    print('n_drawers  = ', int(n_drawers))
+    print('pixel_size = ', pixel_size)
+    #
+    # 0.024300
+    # 0.023300
+    #
+    sf.close()
 
+def astropytable_test(outtablename = 'testtable.h5'):
+    
 def main():
     pass
     
@@ -785,7 +887,7 @@ if __name__ == "__main__":
         isolated_flower_seed_super_flower = np.genfromtxt(isolated_flower_seed_super_flower_csv,dtype=int)
         all_seed_flower = np.genfromtxt(all_seed_flower_csv,dtype=int)
         #
-        evtloop_noise( datafilein=simtelIn, nevmax=100,
+        evtloop_noise( datafilein=simtelIn, nevmax=-1,
                        pixel_mapping=pixel_mapping,
                        L1_trigger_pixel_cluster_list=isolated_flower_seed_super_flower,
                        L3_trigger_DBSCAN_pixel_cluster_list=isolated_flower_seed_flower,
@@ -824,6 +926,12 @@ if __name__ == "__main__":
                                    L3_trigger_DBSCAN_pixel_cluster_list_all=all_seed_flower)
         save_data(event_info_list, outpkl, outcsv)
         #
+    elif (len(sys.argv)==3 and (str(sys.argv[1]) == "--getmap")):
+        simtelIn = str(sys.argv[2])
+        get_pixel_mapping(datafilein = simtelIn, outmap_csv = 'pixel_mapping_from_simtel.csv')
+    elif (len(sys.argv)==3 and (str(sys.argv[1]) == "--astropytable")):
+        simtelIn = str(sys.argv[2])
+        astropytable_test()
     else:
         print(" --> HELP info")
         print("len(sys.argv) = ",len(sys.argv))
@@ -846,3 +954,9 @@ if __name__ == "__main__":
         print(" [6] isolated_flower_seed_super_flower_csv")
         print(" [7] isolated_flower_seed_flower_csv")
         print(" [8] all_seed_flower_csv")
+        print(" ---> for map")
+        print(" [1] --getmap")
+        print(" [2] simtelIn")
+        print(" ---> for map")
+        print(" [1] --astropytable")
+        print(" [2] simtelIn")

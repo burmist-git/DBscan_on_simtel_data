@@ -193,7 +193,6 @@ def get_timeID( number_of_time_points, time_norm, t_val):
         pix_t=np.array([i for i in np.arange(0,number_of_time_points)])
         pix_t=np.abs(pix_t*time_norm-t_val)
         return np.argmin(pix_t)
-
     return -999
 
 def get_digital_sum_threshold( digitalsum, thresholds, number_of_digsum_micro_clusters_in_camera):

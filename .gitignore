@@ -70,3 +70,14 @@ L3_digitalsum_noiseNSB268MHz_arr.pdf_rates.pdf.csv
 L3_digitalsum_noiseNSB268MHz_arr_all.pdf
 L3_digitalsum_noiseNSB268MHz_arr_all.pdf_rates.pdf
 L3_digitalsum_noiseNSB268MHz_arr_all.pdf_rates.pdf.csv
+L1_max_digi_sum_noiseNSB268MHz.pdf
+L1_max_digi_sum_noiseNSB268MHz.pdf_rates.pdf
+L1_max_digi_sum_noiseNSB268MHz.pdf_rates.pdf.csv
+L3_n_points_noiseNSB268MHz.pdf
+L3_n_points_noiseNSB268MHz.pdf_rates.pdf
+L3_n_points_noiseNSB268MHz.pdf_rates.pdf.csv
+cleaning_n_points_noiseNSB268MHz.pdf
+cleaning_n_points_noiseNSB268MHz.pdf_rates.pdf
+cleaning_n_points_noiseNSB268MHz.pdf_rates.pdf.csv
+pixel_mapping_from_simtel.csv
+testtable.h5
