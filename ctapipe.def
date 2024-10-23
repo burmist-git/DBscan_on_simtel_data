@@ -1,0 +1,16 @@
+Bootstrap: docker
+From: ubuntu:22.04
+
+%post
+    apt-get -y update
+    apt-get install -y pip git
+    export SSH_AUTH_SOCK={{SSH_AUTH_SOCK_USER}}
+    mkdir -p $HOME/.ssh
+    touch $HOME/.ssh/known_hosts
+    ssh-keyscan github.com >> $HOME/.ssh/known_hosts
+    cd /
+    pip install ctapipe==0.22.0
+    cd /
+    git clone git@github.com:burmist-git/ctapipe_dbscan_sim_process.git
+    cd /
+    git clone git@github.com:burmist-git/DBscan_on_simtel_data.git
