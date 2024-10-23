@@ -5,6 +5,7 @@ function printHelp {
     echo " [0] -d             : trigger"
     echo " [0] -n             : noise"
     echo " [0] -m             : getmap"
+    echo " [0] --astropytable : astropytable"
     echo " [0] -h             : print help"
 }
 
@@ -50,6 +51,9 @@ else
     elif [ "$1" = "-m" ]; then
 	simtelIn="../scratch/simtel_data/old/proton_st_NSB268MHz/data/corsika_run1.simtel.gz"
 	python DBscan_on_simtel_data_stereo.py --getmap $simtelIn
+    elif [ "$1" = "--astropytable" ]; then
+	simtelIn="../scratch/simtel_data/proton_st/data/corsika_run1.simtel.gz"
+	python3 DBscan_on_simtel_data_stereo.py --astropytable $simtelIn
     elif [ "$1" = "-h" ]; then
         printHelp
     else

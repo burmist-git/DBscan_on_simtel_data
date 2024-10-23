@@ -16,6 +16,9 @@ from sklearn.cluster import DBSCAN
 import matplotlib.pyplot as plt
 #
 from astropy.table import Table
+from collections import defaultdict
+from astropy.table import Table
+from ctapipe.io.astropy_helpers import write_table
 
 ###################################
 #
@@ -855,8 +858,28 @@ def get_pixel_mapping(datafilein = "../simtel_data/proton/data/corsika_run1.simt
     #
     sf.close()
 
-def astropytable_test(outtablename = 'testtable.h5'):
-    
+def astropytable_test(outtablename = 'testtable.h5', datafilein = "corsika_run1.simtel.gz"):
+    print(outtablename)
+    data = defaultdict(list)
+    for i in range(15):
+        data['event_id'].append(1)
+        data['energy'].append(2)
+        #
+    write_table(table=Table(data),h5file=outtablename,path="/trigger/event/telescope/tel_001",overwrite=True)
+    #write_table(table=Table(data),
+    #            h5file="/home/burmist/home2/work/CTA/ctapipe_dev/ctapipe_dbscan_sim_process/tmp/gamma_run1.r1.dl1.h5",
+    #            path="/trigger/event/telescope/tel_001",
+    #            overwrite=True)
+    #
+    #sf = SimTelFile(datafilein)
+    #
+    #cout=0
+    #for ev in sf:
+    #    print(ev['mc_shower']['primary_id'])
+    #    if (cout>10):
+    #        break
+    #    cout = cout + 1      
+
 def main():
     pass
     
@@ -931,7 +954,7 @@ if __name__ == "__main__":
         get_pixel_mapping(datafilein = simtelIn, outmap_csv = 'pixel_mapping_from_simtel.csv')
     elif (len(sys.argv)==3 and (str(sys.argv[1]) == "--astropytable")):
         simtelIn = str(sys.argv[2])
-        astropytable_test()
+        astropytable_test(datafilein=simtelIn)
     else:
         print(" --> HELP info")
         print("len(sys.argv) = ",len(sys.argv))
