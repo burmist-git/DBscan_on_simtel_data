@@ -17,8 +17,9 @@ import matplotlib.pyplot as plt
 #
 from astropy.table import Table
 from collections import defaultdict
-from astropy.table import Table
 from ctapipe.io.astropy_helpers import write_table
+#
+from tables import open_file
 
 ###################################
 #
@@ -58,6 +59,15 @@ def print_setup():
     print("_DBSCAN_digitalsum_threshold          = ",_DBSCAN_digitalsum_threshold)
     print("_DBSCAN_min_samples                   = ",_DBSCAN_min_samples)
     
+def extend_channel_list( channel_list, number_of_wf_time_samples):
+    channel_list_extended=channel_list.copy()
+    print("channel_list_extended.shape ", channel_list_extended.shape)
+    channel_list_extended=np.expand_dims(channel_list_extended,axis=2)
+    channel_list_extended=np.swapaxes(channel_list_extended, 1, 2)
+    channel_list_extended=np.concatenate(([channel_list_extended for i in np.arange(0,number_of_wf_time_samples)]), axis=1)
+    print("channel_list_extended.shape ", channel_list_extended.shape)
+    return channel_list_extended
+    
 def extend_pixel_mapping( pixel_mapping, channel_list, number_of_wf_time_samples):
     pixel_mapping_extended=pixel_mapping[channel_list[:,0]].copy()
     pixel_mapping_extended=pixel_mapping_extended[:,:-1]
@@ -76,14 +86,32 @@ def extend_pixel_mapping( pixel_mapping, channel_list, number_of_wf_time_samples
     #print(pixel_mapping_extended[0,1,2])
     return pixel_mapping_extended
 
-def get_DBSCAN_clusters( digitalsum, pixel_mapping, pixel_mapping_extended, channel_list, time_norm, digitalsum_threshold, DBSCAN_eps, DBSCAN_min_samples):
+def get_DBSCAN_clusters( digitalsum, pixel_mapping, pixel_mapping_extended, channel_list_extended, time_norm, digitalsum_threshold, DBSCAN_eps, DBSCAN_min_samples):
+    #
+    #print("digitalsum.shape             ",digitalsum.shape)
+    #print("pixel_mapping.shape          ",pixel_mapping.shape)
+    #print("pixel_mapping_extended.shape ",pixel_mapping_extended.shape)
+    #print("channel_list_extended.shape  ",channel_list_extended.shape)
     #
     clusters_info=def_clusters_info()
-    X=pixel_mapping_extended[digitalsum>digitalsum_threshold] 
-    X=X*[[1,1,time_norm]]
+    X=pixel_mapping_extended[digitalsum>digitalsum_threshold]
+    channel_list_cut=channel_list_extended[digitalsum>digitalsum_threshold]
+    X=X*[[1,1,time_norm]] 
+    #
     dbscan = DBSCAN( eps = DBSCAN_eps, min_samples = DBSCAN_min_samples)
     clusters = dbscan.fit_predict(X)
     clustersID = np.unique(clusters)
+    #
+    #print("clustersID              ",clustersID)
+    #print(np.unique(channel_list_cut[clusters>-1]))
+    mask=np.zeros(pixel_mapping.shape[0],dtype=int)
+    mask[np.unique(channel_list_cut[clusters>-1])]=int(1)
+    #print("mask.shape  ",mask.shape)
+    #print(mask)
+    #print("channel_list_cut.shape  ",channel_list_cut.shape)
+    #print("clusters.shape          ",clusters.shape)
+    #print("clusters                ",clusters)
+    #
     #
     clusters_info['n_digitalsum_points'] = len(X)
     #
@@ -101,7 +129,7 @@ def get_DBSCAN_clusters( digitalsum, pixel_mapping, pixel_mapping_extended, chan
         clusters_info['channelID'] = get_channelID_from_x_y( pixel_mapping=pixel_mapping, x_val=clusters_info['x_mean'], y_val=clusters_info['y_mean'])
         clusters_info['timeID'] = get_timeID( number_of_time_points=digitalsum.shape[1], time_norm=time_norm, t_val=clusters_info['t_mean'])
     #
-    return clusters_info
+    return clusters_info, mask
 
 def get_channelID_from_x_y( pixel_mapping, x_val, y_val):
     delta_dist_sq=0.000225
@@ -338,6 +366,11 @@ def evtloop_noise(datafilein, nevmax, pixel_mapping, L1_trigger_pixel_cluster_li
     pixel_mapping_extended=extend_pixel_mapping( pixel_mapping=pixel_mapping, channel_list=L3_trigger_DBSCAN_pixel_cluster_list, number_of_wf_time_samples=_n_of_time_sample)
     pixel_mapping_extended_all=extend_pixel_mapping( pixel_mapping=pixel_mapping, channel_list=L3_trigger_DBSCAN_pixel_cluster_list_all, number_of_wf_time_samples=_n_of_time_sample)
     #
+    L3_trigger_DBSCAN_pixel_cluster_list_extended=extend_channel_list( channel_list=L3_trigger_DBSCAN_pixel_cluster_list,
+                                                                       number_of_wf_time_samples=_n_of_time_sample)
+    L3_trigger_DBSCAN_pixel_cluster_list_all_extended=extend_channel_list( channel_list=L3_trigger_DBSCAN_pixel_cluster_list_all,
+                                                                           number_of_wf_time_samples=_n_of_time_sample)
+    #
     wf_trigger_pixel_list=np.array([i for i in np.arange(0,pixel_mapping.shape[0])])
     wf_trigger_pixel_list=np.reshape(wf_trigger_pixel_list,(pixel_mapping.shape[0],1))
     #
@@ -379,19 +412,19 @@ def evtloop_noise(datafilein, nevmax, pixel_mapping, L1_trigger_pixel_cluster_li
                         #
                         L1_trigger_info = get_L1_trigger_info(digitalsum=L1_digitalsum, pixel_mapping=pixel_mapping, digi_sum_channel_list=L1_trigger_pixel_cluster_list)
                         #
-                        DBSCAN_clusters_info_isolated = get_DBSCAN_clusters( digitalsum = L3_digitalsum,
+                        DBSCAN_clusters_info_isolated, mask_tr = get_DBSCAN_clusters( digitalsum = L3_digitalsum,
                                                                              pixel_mapping = pixel_mapping,
                                                                              pixel_mapping_extended = pixel_mapping_extended,
-                                                                             channel_list = L3_trigger_DBSCAN_pixel_cluster_list,
+                                                                             channel_list_extended = L3_trigger_DBSCAN_pixel_cluster_list_extended,
                                                                              time_norm = _time_norm_isolated,
                                                                              digitalsum_threshold = _DBSCAN_digitalsum_threshold_isolated,
                                                                              DBSCAN_eps = _DBSCAN_eps_isolated,
                                                                              DBSCAN_min_samples = _DBSCAN_min_samples_isolated)
                         #
-                        DBSCAN_clusters_info = get_DBSCAN_clusters( digitalsum = L3_digitalsum_all,
+                        DBSCAN_clusters_info, mask_cl = get_DBSCAN_clusters( digitalsum = L3_digitalsum_all,
                                                                     pixel_mapping = pixel_mapping,
                                                                     pixel_mapping_extended = pixel_mapping_extended_all,
-                                                                    channel_list = L3_trigger_DBSCAN_pixel_cluster_list_all,
+                                                                    channel_list_extended = L3_trigger_DBSCAN_pixel_cluster_list_all_extended,
                                                                     time_norm = _time_norm,
                                                                     digitalsum_threshold = _DBSCAN_digitalsum_threshold,
                                                                     DBSCAN_eps = _DBSCAN_eps,
@@ -429,7 +462,27 @@ def evtloop_noise(datafilein, nevmax, pixel_mapping, L1_trigger_pixel_cluster_li
     #        
     return
 
-def evtloop(datafilein, nevmax, pixel_mapping, L1_trigger_pixel_cluster_list, L3_trigger_DBSCAN_pixel_cluster_list, L3_trigger_DBSCAN_pixel_cluster_list_all):
+def get_obs_id_from_h5dl1_file(h5dl1InName):
+    #"/dl1/event/telescope/parameters/tel_001"
+    #col name is obs_id
+    #print(h5file)
+    #print(table)
+    #print(table[:]['energy'])
+    #print("for node in h5file")
+    #for node in h5file:        
+    #print(node)
+    h5file = open_file(h5dl1InName, "a")
+    table = h5file.root.dl1.event.telescope.parameters.tel_001
+    obs_id=int(np.mean(table[:]['obs_id']))
+    obs_id_std=np.std(table[:]['obs_id'])
+    #print(obs_id)
+    #print(np.std(table[:]['obs_id']))
+    h5file.close()
+    if (obs_id_std == 0.0) :
+        return obs_id
+    return -999
+
+def evtloop(datafilein, h5dl1In, nevmax, pixel_mapping, L1_trigger_pixel_cluster_list, L3_trigger_DBSCAN_pixel_cluster_list, L3_trigger_DBSCAN_pixel_cluster_list_all):
     #
     print("evtloop")
     #
@@ -442,9 +495,18 @@ def evtloop(datafilein, nevmax, pixel_mapping, L1_trigger_pixel_cluster_list, L3
     it_cout = 0
     #
     event_info_list=[]
+    mask_cl_LST1_list=[]
+    mask_cl_LST2_list=[]
+    mask_cl_LST3_list=[]
+    mask_cl_LST4_list=[]
     #
     pixel_mapping_extended=extend_pixel_mapping( pixel_mapping=pixel_mapping, channel_list=L3_trigger_DBSCAN_pixel_cluster_list, number_of_wf_time_samples=_n_of_time_sample)
     pixel_mapping_extended_all=extend_pixel_mapping( pixel_mapping=pixel_mapping, channel_list=L3_trigger_DBSCAN_pixel_cluster_list_all, number_of_wf_time_samples=_n_of_time_sample)
+    #
+    L3_trigger_DBSCAN_pixel_cluster_list_extended=extend_channel_list( channel_list=L3_trigger_DBSCAN_pixel_cluster_list,
+                                                                       number_of_wf_time_samples=_n_of_time_sample)
+    L3_trigger_DBSCAN_pixel_cluster_list_all_extended=extend_channel_list( channel_list=L3_trigger_DBSCAN_pixel_cluster_list_all,
+                                                                           number_of_wf_time_samples=_n_of_time_sample)
     #
     for ev in sf:
         #
@@ -476,6 +538,11 @@ def evtloop(datafilein, nevmax, pixel_mapping, L1_trigger_pixel_cluster_list, L3
         DBSCAN_clusters_info_isolated_LST3=None
         DBSCAN_clusters_info_isolated_LST4=None
         #
+        mask_cl_LST1=None
+        mask_cl_LST2=None
+        mask_cl_LST3=None
+        mask_cl_LST4=None
+        #
         #
         ev_time=[0,0,0,0]
         nphotons=[0,0,0,0]
@@ -502,18 +569,22 @@ def evtloop(datafilein, nevmax, pixel_mapping, L1_trigger_pixel_cluster_list, L3
                 L1_trigger_info_LST1 = def_L1_trigger_info()
                 DBSCAN_clusters_info_isolated_LST1 = def_clusters_info()
                 DBSCAN_clusters_info_LST1 = def_clusters_info()
+                mask_cl_LST1=np.zeros(pixel_mapping.shape[0],dtype=int)
             elif (n_pe[i] == 0 and i == 1) :
                 L1_trigger_info_LST2 = def_L1_trigger_info()
                 DBSCAN_clusters_info_isolated_LST2 = def_clusters_info()
                 DBSCAN_clusters_info_LST2 = def_clusters_info()
+                mask_cl_LST2=np.zeros(pixel_mapping.shape[0],dtype=int)
             elif (n_pe[i] == 0 and i == 2) :
                 L1_trigger_info_LST3 = def_L1_trigger_info()
                 DBSCAN_clusters_info_isolated_LST3 = def_clusters_info()
                 DBSCAN_clusters_info_LST3 = def_clusters_info()
+                mask_cl_LST3=np.zeros(pixel_mapping.shape[0],dtype=int)
             elif (n_pe[i] == 0 and i == 3) :
                 L1_trigger_info_LST4 = def_L1_trigger_info()
                 DBSCAN_clusters_info_isolated_LST4 = def_clusters_info()
                 DBSCAN_clusters_info_LST4 = def_clusters_info()                
+                mask_cl_LST4=np.zeros(pixel_mapping.shape[0],dtype=int)
         #
         #
         #print("event_id = ", int(ev['event_id']))
@@ -527,19 +598,19 @@ def evtloop(datafilein, nevmax, pixel_mapping, L1_trigger_pixel_cluster_list, L3
                 #
                 L1_trigger_info = get_L1_trigger_info(digitalsum=L1_digitalsum, pixel_mapping=pixel_mapping, digi_sum_channel_list=L1_trigger_pixel_cluster_list)
                 #                
-                DBSCAN_clusters_info_isolated = get_DBSCAN_clusters( digitalsum = L3_digitalsum,
+                DBSCAN_clusters_info_isolated, mask_tr = get_DBSCAN_clusters( digitalsum = L3_digitalsum,
                                                                      pixel_mapping = pixel_mapping,
                                                                      pixel_mapping_extended = pixel_mapping_extended,
-                                                                     channel_list = L3_trigger_DBSCAN_pixel_cluster_list,
+                                                                     channel_list_extended = L3_trigger_DBSCAN_pixel_cluster_list_extended,
                                                                      time_norm = _time_norm_isolated,
                                                                      digitalsum_threshold = _DBSCAN_digitalsum_threshold_isolated,
                                                                      DBSCAN_eps = _DBSCAN_eps_isolated,
                                                                      DBSCAN_min_samples = _DBSCAN_min_samples_isolated)
                 #
-                DBSCAN_clusters_info = get_DBSCAN_clusters( digitalsum = L3_digitalsum_all,
+                DBSCAN_clusters_info, mask_cl = get_DBSCAN_clusters( digitalsum = L3_digitalsum_all,
                                                             pixel_mapping = pixel_mapping,
                                                             pixel_mapping_extended = pixel_mapping_extended_all,
-                                                            channel_list = L3_trigger_DBSCAN_pixel_cluster_list_all,
+                                                            channel_list_extended = L3_trigger_DBSCAN_pixel_cluster_list_all_extended,
                                                             time_norm = _time_norm,
                                                             digitalsum_threshold = _DBSCAN_digitalsum_threshold,
                                                             DBSCAN_eps = _DBSCAN_eps,
@@ -550,18 +621,22 @@ def evtloop(datafilein, nevmax, pixel_mapping, L1_trigger_pixel_cluster_list, L3
                     L1_trigger_info_LST1 = L1_trigger_info
                     DBSCAN_clusters_info_isolated_LST1 = DBSCAN_clusters_info_isolated
                     DBSCAN_clusters_info_LST1 = DBSCAN_clusters_info
+                    mask_cl_LST1=mask_cl
                 elif (lst_id == 1) :
                     L1_trigger_info_LST2 = L1_trigger_info
                     DBSCAN_clusters_info_isolated_LST2 = DBSCAN_clusters_info_isolated
                     DBSCAN_clusters_info_LST2 = DBSCAN_clusters_info
+                    mask_cl_LST2=mask_cl
                 elif (lst_id == 2) :
                     L1_trigger_info_LST3 = L1_trigger_info
                     DBSCAN_clusters_info_isolated_LST3 = DBSCAN_clusters_info_isolated
                     DBSCAN_clusters_info_LST3 = DBSCAN_clusters_info                    
+                    mask_cl_LST3=mask_cl
                 elif (lst_id == 3) :
                     L1_trigger_info_LST4 = L1_trigger_info
                     DBSCAN_clusters_info_isolated_LST4 = DBSCAN_clusters_info_isolated
                     DBSCAN_clusters_info_LST4 = DBSCAN_clusters_info
+                    mask_cl_LST4=mask_cl
                 #
                 #
             except:
@@ -569,20 +644,30 @@ def evtloop(datafilein, nevmax, pixel_mapping, L1_trigger_pixel_cluster_list, L3
                     L1_trigger_info_LST1 = def_L1_trigger_info()
                     DBSCAN_clusters_info_isolated_LST1 = def_clusters_info()
                     DBSCAN_clusters_info_LST1 = def_clusters_info()
+                    mask_cl_LST1==np.zeros(pixel_mapping.shape[0],dtype=int)
                 elif (lst_id == 1) :
                     L1_trigger_info_LST2 = def_L1_trigger_info()
                     DBSCAN_clusters_info_isolated_LST2 = def_clusters_info()
                     DBSCAN_clusters_info_LST2 = def_clusters_info()
+                    mask_cl_LST2==np.zeros(pixel_mapping.shape[0],dtype=int)
                 elif (lst_id == 2) :
                     L1_trigger_info_LST3 = def_L1_trigger_info()
                     DBSCAN_clusters_info_isolated_LST3 = def_clusters_info()
                     DBSCAN_clusters_info_LST3 = def_clusters_info()
+                    mask_cl_LST3==np.zeros(pixel_mapping.shape[0],dtype=int)
                 elif (lst_id == 3) :
                     L1_trigger_info_LST4 = def_L1_trigger_info()
                     DBSCAN_clusters_info_isolated_LST4 = def_clusters_info()
                     DBSCAN_clusters_info_LST4 = def_clusters_info()
+                    mask_cl_LST4==np.zeros(pixel_mapping.shape[0],dtype=int)
             #
             #
+        #
+        #
+        mask_cl_LST1_list.append(mask_cl_LST1)
+        mask_cl_LST2_list.append(mask_cl_LST2)
+        mask_cl_LST3_list.append(mask_cl_LST3)
+        mask_cl_LST4_list.append(mask_cl_LST4)
         #
         #
         event_info_list.append([ev['event_id'],
@@ -714,10 +799,12 @@ def evtloop(datafilein, nevmax, pixel_mapping, L1_trigger_pixel_cluster_list, L3
         it_cout = it_cout + 1
         
     sf.close()
-    
-    return event_info_list
 
-def save_data(event_info_list, outpkl, outcsv):
+    return event_info_list, mask_cl_LST1_list, mask_cl_LST2_list, mask_cl_LST3_list, mask_cl_LST4_list
+
+def save_data(event_info_list,
+              mask_cl_LST1_list, mask_cl_LST2_list, mask_cl_LST3_list, mask_cl_LST4_list,
+              outpkl, outcsv, outh5, obs_id):
     event_info_arr=np.array(event_info_list)
     pkl.dump(event_info_arr, open(outpkl, "wb"), protocol=pkl.HIGHEST_PROTOCOL)    
     df = pd.DataFrame({'event_id': event_info_arr[:,0],
@@ -836,7 +923,68 @@ def save_data(event_info_list, outpkl, outcsv):
                        'L3_cl_channelID_LST4': event_info_arr[:,113],
                        'L3_cl_timeID_LST4': event_info_arr[:,114]})
     df.to_csv(outcsv)
+    save_df_to_astropytable( df=df,
+                             mask_LST1=mask_cl_LST1_list, mask_LST2=mask_cl_LST2_list,
+                             mask_LST3=mask_cl_LST3_list, mask_LST4=mask_cl_LST4_list,
+                             outh5=outh5, obs_id=obs_id)
 
+def save_df_to_astropytable( df, mask_LST1, mask_LST2, mask_LST3, mask_LST4, outh5, obs_id):
+    data_LST1 = defaultdict(list)
+    data_LST2 = defaultdict(list)
+    data_LST3 = defaultdict(list)
+    data_LST4 = defaultdict(list)
+    #
+    #print("obs_id = ",obs_id)
+    #print(len(df))
+    #print(len(mask_LST1))
+    #print(len(mask_LST2))
+    #print(len(mask_LST3))
+    #print(len(mask_LST4))
+    #
+    ev_columns = []
+    LST1_columns = []
+    LST2_columns = []
+    LST3_columns = []
+    LST4_columns = []
+    #print(len(df.columns))
+    for colname in df.columns :
+        if colname.find('_LST1') > -1:
+            LST1_columns.append(colname)
+        if colname.find('_LST2') > -1:
+            LST2_columns.append(colname)
+        if colname.find('_LST3') > -1:
+            LST3_columns.append(colname)
+        if colname.find('_LST4') > -1:
+            LST4_columns.append(colname)
+        if colname.find('_LST') == -1:
+            ev_columns.append(colname)
+    #
+    for i in range(len(df)):
+        data_LST1['obs_id'].append(obs_id)
+        data_LST2['obs_id'].append(obs_id)
+        data_LST3['obs_id'].append(obs_id)
+        data_LST4['obs_id'].append(obs_id)
+    #
+    for j in range(len(ev_columns)):
+        data_LST1[ev_columns[j]]=df[ev_columns[j]].values
+        data_LST2[ev_columns[j]]=df[ev_columns[j]].values
+        data_LST3[ev_columns[j]]=df[ev_columns[j]].values
+        data_LST4[ev_columns[j]]=df[ev_columns[j]].values
+    #
+    for j in range(len(LST1_columns)):
+        data_LST1[LST1_columns[j]]=df[LST1_columns[j]].values
+        data_LST2[LST2_columns[j]]=df[LST2_columns[j]].values
+        data_LST3[LST3_columns[j]]=df[LST3_columns[j]].values
+        data_LST4[LST4_columns[j]]=df[LST4_columns[j]].values
+    #
+    for i in range(len(mask_LST1)):
+        data_LST1['mask'].append(mask_LST1[i])
+        
+    write_table(table=Table(data_LST1),h5file=outh5,path="/trigger/event/telescope/tel_001",overwrite=True)
+    #write_table(table=Table(data_LST2),h5file=outh5,path="/trigger/event/telescope/tel_002",overwrite=True)
+    #write_table(table=Table(data_LST3),h5file=outh5,path="/trigger/event/telescope/tel_003",overwrite=True)
+    #write_table(table=Table(data_LST4),h5file=outh5,path="/trigger/event/telescope/tel_004",overwrite=True)
+    
 def get_pixel_mapping(datafilein = "../simtel_data/proton/data/corsika_run1.simtel.gz", outmap_csv = 'pixel_mapping_from_simtel.csv'):
     sf = SimTelFile(datafilein)
     #
@@ -857,7 +1005,7 @@ def get_pixel_mapping(datafilein = "../simtel_data/proton/data/corsika_run1.simt
     # 0.023300
     #
     sf.close()
-
+    
 def astropytable_test(outtablename = 'testtable.h5', datafilein = "corsika_run1.simtel.gz"):
     print(outtablename)
     data = defaultdict(list)
@@ -865,7 +1013,9 @@ def astropytable_test(outtablename = 'testtable.h5', datafilein = "corsika_run1.
         data['event_id'].append(1)
         data['energy'].append(2)
         #
+    #    
     write_table(table=Table(data),h5file=outtablename,path="/trigger/event/telescope/tel_001",overwrite=True)
+    #
     #write_table(table=Table(data),
     #            h5file="/home/burmist/home2/work/CTA/ctapipe_dev/ctapipe_dbscan_sim_process/tmp/gamma_run1.r1.dl1.h5",
     #            path="/trigger/event/telescope/tel_001",
@@ -880,6 +1030,16 @@ def astropytable_test(outtablename = 'testtable.h5', datafilein = "corsika_run1.
     #        break
     #    cout = cout + 1      
 
+def astropytable_read_test(intablename = 'testtable.h5'):
+    h5file = open_file(intablename, "a")
+    print(h5file)
+    table = h5file.root.trigger.event.telescope.tel_001
+    print(table[:]['event_id'])
+    print(table[:]['energy'])
+    print("for node in h5file")
+    for node in h5file:        
+        print(node)
+    
 def main():
     pass
     
@@ -916,20 +1076,24 @@ if __name__ == "__main__":
                        L3_trigger_DBSCAN_pixel_cluster_list=isolated_flower_seed_flower,
                        L3_trigger_DBSCAN_pixel_cluster_list_all=all_seed_flower)
         #
-    elif (len(sys.argv)==9 and (str(sys.argv[1]) == "--trg")):
+    elif (len(sys.argv)==11 and (str(sys.argv[1]) == "--trg")):
         #
         simtelIn = str(sys.argv[2])
-        outpkl = str(sys.argv[3])
-        outcsv = str(sys.argv[4])
-        pixel_mapping_csv = str(sys.argv[5])
-        isolated_flower_seed_super_flower_csv = str(sys.argv[6])
-        isolated_flower_seed_flower_csv = str(sys.argv[7])
-        all_seed_flower_csv = str(sys.argv[8])
+        dl1In = str(sys.argv[3])
+        outpkl = str(sys.argv[4])
+        outcsv = str(sys.argv[5])
+        outh5 = str(sys.argv[6])
+        pixel_mapping_csv = str(sys.argv[7])
+        isolated_flower_seed_super_flower_csv = str(sys.argv[8])
+        isolated_flower_seed_flower_csv = str(sys.argv[9])
+        all_seed_flower_csv = str(sys.argv[10])
         #
         print("sys.argv[1]                           = ", sys.argv[1])
         print("simtelIn                              = ", simtelIn)
+        print("dl1In                                 = ", dl1In)
         print("outpkl                                = ", outpkl)
         print("outcsv                                = ", outcsv)
+        print("outh5                                 = ", outh5)
         print("pixel_mapping_csv                     = ", pixel_mapping_csv)
         print("isolated_flower_seed_super_flower_csv = ", isolated_flower_seed_super_flower_csv)
         print("isolated_flower_seed_flower_csv       = ", isolated_flower_seed_flower_csv)
@@ -942,12 +1106,17 @@ if __name__ == "__main__":
         isolated_flower_seed_super_flower = np.genfromtxt(isolated_flower_seed_super_flower_csv,dtype=int)
         all_seed_flower = np.genfromtxt(all_seed_flower_csv,dtype=int)
         #
-        event_info_list = evtloop( datafilein=simtelIn, nevmax=-1,
-                                   pixel_mapping=pixel_mapping,
-                                   L1_trigger_pixel_cluster_list=isolated_flower_seed_super_flower,
-                                   L3_trigger_DBSCAN_pixel_cluster_list=isolated_flower_seed_flower,
-                                   L3_trigger_DBSCAN_pixel_cluster_list_all=all_seed_flower)
-        save_data(event_info_list, outpkl, outcsv)
+        event_info_list, mask_cl_LST1_list, mask_cl_LST2_list, mask_cl_LST3_list, mask_cl_LST4_list = evtloop( datafilein=simtelIn,
+                                                                                                               h5dl1In=dl1In,
+                                                                                                               nevmax=-1,
+                                                                                                               pixel_mapping=pixel_mapping,
+                                                                                                               L1_trigger_pixel_cluster_list=isolated_flower_seed_super_flower,
+                                                                                                               L3_trigger_DBSCAN_pixel_cluster_list=isolated_flower_seed_flower,
+                                                                                                               L3_trigger_DBSCAN_pixel_cluster_list_all=all_seed_flower)
+        obs_id=get_obs_id_from_h5dl1_file(h5dl1InName=dl1In)
+        save_data(event_info_list,
+                  mask_cl_LST1_list, mask_cl_LST2_list, mask_cl_LST3_list, mask_cl_LST4_list,
+                  outpkl, outcsv, outh5, obs_id)
         #
     elif (len(sys.argv)==3 and (str(sys.argv[1]) == "--getmap")):
         simtelIn = str(sys.argv[2])
@@ -955,6 +1124,9 @@ if __name__ == "__main__":
     elif (len(sys.argv)==3 and (str(sys.argv[1]) == "--astropytable")):
         simtelIn = str(sys.argv[2])
         astropytable_test(datafilein=simtelIn)
+    elif (len(sys.argv)==3 and (str(sys.argv[1]) == "--astropytable_read")):
+        intablename = str(sys.argv[2])
+        astropytable_read_test(intablename=intablename)
     else:
         print(" --> HELP info")
         print("len(sys.argv) = ",len(sys.argv))
@@ -971,15 +1143,19 @@ if __name__ == "__main__":
         print(" ---> for events")
         print(" [1] --trg")
         print(" [2] simtelIn")
-        print(" [3] outpkl")
-        print(" [4] outcsv")
-        print(" [5] pixel_mapping_csv")
-        print(" [6] isolated_flower_seed_super_flower_csv")
-        print(" [7] isolated_flower_seed_flower_csv")
-        print(" [8] all_seed_flower_csv")
+        print(" [3] dl1In")
+        print(" [4] outpkl")
+        print(" [5] outcsv")
+        print(" [6] outh5")
+        print(" [7] pixel_mapping_csv")
+        print(" [8] isolated_flower_seed_super_flower_csv")
+        print(" [9] isolated_flower_seed_flower_csv")
+        print(" [10] all_seed_flower_csv")
         print(" ---> for map")
         print(" [1] --getmap")
         print(" [2] simtelIn")
         print(" ---> for map")
         print(" [1] --astropytable")
         print(" [2] simtelIn")
+        print(" [1] --astropytable_read")
+        print(" [2] tableIn")
