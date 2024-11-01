@@ -54,7 +54,9 @@ Int_t plots_rates(){
   //
   //
   //
-  read_file("L1_digitalsum_noiseNSB268MHz_arr.pdf_rates.pdf.csv", h1_wf_noise, gr_wf_noise_vs_thADC);
+  read_file("L3_digitalsum_noiseNSB268MHz_arr_all.pdf_rates.pdf.csv", h1_wf_noise, gr_wf_noise_vs_thADC);
+  //read_file("L1_digitalsum_noiseNSB268MHz_arr.pdf_rates.pdf.csv", h1_wf_noise, gr_wf_noise_vs_thADC);
+  //read_file("L1_max_digi_sum_noiseNSB268MHz.pdf_rates.pdf.csv", h1_wf_noise, gr_wf_noise_vs_thADC);
   //read_file("wf_noiseNSB268MHz_blacklist_arr.pdf_rates.pdf.csv", h1_wf_noise_bl, gr_wf_noise_vs_thADC_bl);
   //read_file("L0_digitalsum_noiseNSB268MHz_blacklist_arr.pdf_rates.pdf.csv", h1_wf_noise_bl, gr_wf_noise_vs_thADC_bl);
   //read_file("L1_digitalsum_noise_blacklist_arr.pdf_rates.pdf.csv", h1_wf_noise_bl, gr_wf_noise_vs_thADC_bl);
@@ -128,7 +130,7 @@ Int_t plots_rates(){
   //mg->Add(gr_wf_noise_vs_thADC_bl);
   //
   mg->Draw("apl");
-  h1_isolated_flower_rate->Draw("sames");
+  //h1_isolated_flower_rate->Draw("sames");
   //
   mg->SetMaximum(1.0e+14);
   mg->SetMinimum(1.0e+1);
