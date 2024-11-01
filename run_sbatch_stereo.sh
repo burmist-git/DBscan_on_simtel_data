@@ -1,9 +1,14 @@
 #!/bin/sh
 
-#n_jobs_start=214
-#n_jobs_stop=217
 n_jobs_start=1
 n_jobs_stop=71
+#n_jobs_start=72
+#n_jobs_stop=142
+#n_jobs_start=143
+#n_jobs_stop=213
+#n_jobs_start=214
+#n_jobs_stop=284
+
 username_whoami=$(whoami)
 
 function printHelp {
