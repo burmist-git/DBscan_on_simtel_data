@@ -469,8 +469,9 @@ def get_obs_id_from_h5dl1_file(h5dl1InName):
     #print(table)
     #print(table[:]['energy'])
     #print("for node in h5file")
-    #for node in h5file:        
+    #for node in h5file:
     #print(node)
+    #
     h5file = open_file(h5dl1InName, "a")
     table = h5file.root.dl1.event.telescope.parameters.tel_001
     obs_id=int(np.mean(table[:]['obs_id']))
