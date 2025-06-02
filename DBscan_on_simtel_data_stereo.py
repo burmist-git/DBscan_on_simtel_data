@@ -29,6 +29,7 @@ _npe_noise=20
 _n_of_time_sample=75
 _time_of_one_sample_s=(_n_of_time_sample*1000/1024.0*1.0e-9)
 _event_modulo=100
+_n_total_pixels=7987
 #
 #
 #
@@ -500,6 +501,9 @@ def evtloop(datafilein, h5dl1In, nevmax, pixel_mapping, L1_trigger_pixel_cluster
     mask_cl_LST2_list=[]
     mask_cl_LST3_list=[]
     mask_cl_LST4_list=[]
+    #
+    print("pixel_mapping.shape ", pixel_mapping.shape[0])
+    assert pixel_mapping.shape[0] == _n_total_pixels, "pixel_mapping.shape[0] and _n_total_pixels should be equal"
     #
     pixel_mapping_extended=extend_pixel_mapping( pixel_mapping=pixel_mapping, channel_list=L3_trigger_DBSCAN_pixel_cluster_list, number_of_wf_time_samples=_n_of_time_sample)
     pixel_mapping_extended_all=extend_pixel_mapping( pixel_mapping=pixel_mapping, channel_list=L3_trigger_DBSCAN_pixel_cluster_list_all, number_of_wf_time_samples=_n_of_time_sample)
@@ -980,11 +984,11 @@ def save_df_to_astropytable( df, mask_LST1, mask_LST2, mask_LST3, mask_LST4, out
     #
     print("len(mask_LST1) : ", len(mask_LST1))
     #
-    for i in range(len(mask_LST1)):
-        data_LST1['mask'].append(mask_LST1[i])
+    mask_LST1_none_free=[np.zeros(_n_total_pixels) if mm is None else mm for mm in mask_LST1]
     #
+    for i in range(len(mask_LST1_none_free)):
+        data_LST1['mask'].append(mask_LST1_none_free[i])
     #
-    print("print to : ", outh5)
     write_table( table=Table(data_LST1),h5file=outh5,path="/trigger/event/telescope/tel_001",overwrite=True)
     #write_table(table=Table(data_LST2),h5file=outh5,path="/trigger/event/telescope/tel_002",overwrite=True)
     #write_table(table=Table(data_LST3),h5file=outh5,path="/trigger/event/telescope/tel_003",overwrite=True)
@@ -1113,7 +1117,7 @@ if __name__ == "__main__":
         #
         event_info_list, mask_cl_LST1_list, mask_cl_LST2_list, mask_cl_LST3_list, mask_cl_LST4_list = evtloop( datafilein=simtelIn,
                                                                                                                h5dl1In=dl1In,
-                                                                                                               nevmax=100,
+                                                                                                               nevmax=-1,
                                                                                                                pixel_mapping=pixel_mapping,
                                                                                                                L1_trigger_pixel_cluster_list=isolated_flower_seed_super_flower,
                                                                                                                L3_trigger_DBSCAN_pixel_cluster_list=isolated_flower_seed_flower,
