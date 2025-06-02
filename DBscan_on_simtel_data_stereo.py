@@ -1109,7 +1109,7 @@ if __name__ == "__main__":
         #
         event_info_list, mask_cl_LST1_list, mask_cl_LST2_list, mask_cl_LST3_list, mask_cl_LST4_list = evtloop( datafilein=simtelIn,
                                                                                                                h5dl1In=dl1In,
-                                                                                                               nevmax=-1,
+                                                                                                               nevmax=100,
                                                                                                                pixel_mapping=pixel_mapping,
                                                                                                                L1_trigger_pixel_cluster_list=isolated_flower_seed_super_flower,
                                                                                                                L3_trigger_DBSCAN_pixel_cluster_list=isolated_flower_seed_flower,
