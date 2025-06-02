@@ -978,10 +978,14 @@ def save_df_to_astropytable( df, mask_LST1, mask_LST2, mask_LST3, mask_LST4, out
         data_LST3[LST3_columns[j]]=df[LST3_columns[j]].values
         data_LST4[LST4_columns[j]]=df[LST4_columns[j]].values
     #
+    print("len(mask_LST1) : ", len(mask_LST1))
+    #
     for i in range(len(mask_LST1)):
         data_LST1['mask'].append(mask_LST1[i])
-        
-    write_table(table=Table(data_LST1),h5file=outh5,path="/trigger/event/telescope/tel_001",overwrite=True)
+    #
+    #
+    print("print to : ", outh5)
+    write_table( table=Table(data_LST1),h5file=outh5,path="/trigger/event/telescope/tel_001",overwrite=True)
     #write_table(table=Table(data_LST2),h5file=outh5,path="/trigger/event/telescope/tel_002",overwrite=True)
     #write_table(table=Table(data_LST3),h5file=outh5,path="/trigger/event/telescope/tel_003",overwrite=True)
     #write_table(table=Table(data_LST4),h5file=outh5,path="/trigger/event/telescope/tel_004",overwrite=True)
