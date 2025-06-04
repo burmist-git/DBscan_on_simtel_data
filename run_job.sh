@@ -2,6 +2,7 @@
 #SBATCH --job-name simtel%j
 #SBATCH --error /srv/beegfs/scratch/users/b/burmistr/sim_telarray/prod5/NSB_268MHz/proton/dbscan_npe/job_error/crgen_%j.error
 #SBATCH --output /srv/beegfs/scratch/users/b/burmistr/sim_telarray/prod5/NSB_268MHz/proton/dbscan_npe/job_output/output_%j.output
+#SBATCH --mem=40G
 #SBATCH --ntasks 1
 #SBATCH --cpus-per-task 1
 #SBATCH --partition public-cpu
@@ -35,9 +36,9 @@ else
             simtelIn=$dataOIdir_sim_telarray_data"/corsika_run"$jobID".simtel.gz"
             dl1In=$dataOIdir_ctapipe_Preff"/corsika_run"$jobID".r1.dl1.h5"
             #
-	    outpkl=$dataOIdir_sim_telarray_dbscan_npe"/corsika_run1.npe.pkl"
-            outcsv=$dataOIdir_sim_telarray_dbscan_npe"/corsika_run1.npe.csv"
-            outh5=$dataOIdir_sim_telarray_dbscan_npe"/corsika_run1.npe.h5"
+	    outpkl=$dataOIdir_sim_telarray_dbscan_npe"/corsika_run"$jobID".npe.pkl"
+            outcsv=$dataOIdir_sim_telarray_dbscan_npe"/corsika_run"$jobID".npe.csv"
+            outh5=$dataOIdir_sim_telarray_dbscan_npe"/corsika_run"$jobID".npe.h5"
 	    #
             pixel_mapping_csv="/DBscan_on_simtel_data/pixel_mapping.csv"
             isolated_flower_seed_super_flower_csv="/DBscan_on_simtel_data/isolated_flower_seed_super_flower.list"
@@ -54,7 +55,7 @@ else
             echo "isolated_flower_seed_flower_csv       $isolated_flower_seed_flower_csv"
             echo "all_seed_flower_csv                   $all_seed_flower_csv"
             #
-	    #srun singularity run -B $scratchDir:$scratchDir $sif_file python3 DBscan_on_simtel_data_stereo.py --trg $simtelIn $dl1In $outpkl $outcsv $outh5 $pixel_mapping_csv $isolated_flower_seed_super_flower_csv $isolated_flower_seed_flower_csv $all_seed_flower_csv
+	    PYTHONUNBUFFERED=1 srun singularity run -B $scratchDir:$scratchDir $sif_file python3 DBscan_on_simtel_data_stereo.py --trg $simtelIn $dl1In $outpkl $outcsv $outh5 $pixel_mapping_csv $isolated_flower_seed_super_flower_csv $isolated_flower_seed_flower_csv $all_seed_flower_csv
 	else
             printHelp       
         fi      

@@ -2,6 +2,7 @@
 #SBATCH --job-name simtel%j
 #SBATCH --error /srv/beegfs/scratch/users/b/burmistr/sim_telarray/prod5/NSB_268MHz/gamma_diffuse/dbscan_npe/job_error/crgen_%j.error
 #SBATCH --output /srv/beegfs/scratch/users/b/burmistr/sim_telarray/prod5/NSB_268MHz/gamma_diffuse/dbscan_npe/job_output/output_%j.output
+#SBATCH --mem=40G
 #SBATCH --ntasks 1
 #SBATCH --cpus-per-task 1
 #SBATCH --partition public-cpu
@@ -54,7 +55,7 @@ else
             echo "isolated_flower_seed_flower_csv       $isolated_flower_seed_flower_csv"
             echo "all_seed_flower_csv                   $all_seed_flower_csv"
             #
-	    srun singularity run -B $scratchDir:$scratchDir $sif_file python3 DBscan_on_simtel_data_stereo.py --trg $simtelIn $dl1In $outpkl $outcsv $outh5 $pixel_mapping_csv $isolated_flower_seed_super_flower_csv $isolated_flower_seed_flower_csv $all_seed_flower_csv
+	    PYTHONUNBUFFERED=1 srun singularity run -B $scratchDir:$scratchDir $sif_file python3 DBscan_on_simtel_data_stereo.py --trg $simtelIn $dl1In $outpkl $outcsv $outh5 $pixel_mapping_csv $isolated_flower_seed_super_flower_csv $isolated_flower_seed_flower_csv $all_seed_flower_csv
 	else
             printHelp       
         fi      
