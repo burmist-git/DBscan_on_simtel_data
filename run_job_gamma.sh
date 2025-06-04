@@ -5,7 +5,7 @@
 #SBATCH --ntasks 1
 #SBATCH --cpus-per-task 1
 #SBATCH --partition public-cpu
-#SBATCH --time 24:00:00
+#SBATCH --time 01:00:00
 
 function printHelp {
     echo " --> ERROR in input arguments "
@@ -24,7 +24,8 @@ else
 	    particletype=$2
 	    jobID=$3
 	    #
-	    sif_file="../ctapipe_dbscan_sim_process/ctapipe.sif"
+	    #sif_file="../ctapipe_dbscan_sim_process/ctapipe.sif"
+	    sif_file="./ctapipe.sif"
             scratchDir="/srv/beegfs/scratch/users/b/burmistr/"
             dataOIdir_sim_telarray_Preff=$scratchDir"/sim_telarray/prod5/NSB_268MHz/$particletype/"
             dataOIdir_sim_telarray_data=$dataOIdir_sim_telarray_Preff"/data/"
@@ -55,6 +56,7 @@ else
             echo "all_seed_flower_csv                   $all_seed_flower_csv"
             #
 	    srun singularity run -B $scratchDir:$scratchDir $sif_file python3 DBscan_on_simtel_data_stereo.py --trg $simtelIn $dl1In $outpkl $outcsv $outh5 $pixel_mapping_csv $isolated_flower_seed_super_flower_csv $isolated_flower_seed_flower_csv $all_seed_flower_csv
+	    #echo "srun singularity run -B $scratchDir:$scratchDir $sif_file python3 DBscan_on_simtel_data_stereo.py --trg $simtelIn $dl1In $outpkl $outcsv $outh5 $pixel_mapping_csv $isolated_flower_seed_super_flower_csv $isolated_flower_seed_flower_csv $all_seed_flower_csv"
 	else
             printHelp       
         fi      
