@@ -101,6 +101,7 @@ else
         echo "isolated_flower_seed_flower_csv       $isolated_flower_seed_flower_csv"
         echo "all_seed_flower_csv                   $all_seed_flower_csv"
         #
+	#strace
 	python3 DBscan_on_simtel_data_stereo.py --trg $simtelIn $dl1In $outpkl $outcsv $outh5 $pixel_mapping_csv $isolated_flower_seed_super_flower_csv $isolated_flower_seed_flower_csv $all_seed_flower_csv
     elif [ "$1" = "--n_mono" ]; then
 	#
